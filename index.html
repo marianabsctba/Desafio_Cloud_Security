@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>☁️ CLOUD FORENSICS LAB — Operation: S3 Gone Wild - Mariana BS - Be Safe</title>
+<title>☁️ CLOUD FORENSICS LAB — Operation: S3 Gone Wild</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Great+Vibes&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg:#080c10;--bg2:#0d1117;--bg3:#161b22;--bg4:#1c2330;
@@ -1152,71 +1152,100 @@ function genCert(pct,correct,wrong){
   const cv=document.getElementById('cert-canvas');
   const ctx=cv.getContext('2d');
   const W=900,H=600;
+  const issuedAt=new Date();
+  const issuedDate=issuedAt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const holder=(ST.userName||'Participante').trim();
+  const hash=shash(holder+'|'+pct+'|'+correct+'|'+issuedAt.toISOString().slice(0,10)+'|S3GoneWild');
+  const certId='CF-AWS-'+hash.replace('CF-','');
 
-  // Base
-  ctx.fillStyle='#faf8f3';ctx.fillRect(0,0,W,H);
+  function line(txt,x,y,maxWidth,lineHeight,font,fill='#334'){
+    ctx.font=font;ctx.fillStyle=fill;ctx.textAlign='center';
+    const words=String(txt).split(' ');let cur='', yy=y;
+    for(const w of words){
+      const test=cur?cur+' '+w:w;
+      if(ctx.measureText(test).width>maxWidth&&cur){ctx.fillText(cur,x,yy);cur=w;yy+=lineHeight}else cur=test;
+    }
+    if(cur)ctx.fillText(cur,x,yy);
+    return yy;
+  }
 
-  // Border
-  ctx.strokeStyle='#1a2a1a';ctx.lineWidth=4;ctx.strokeRect(18,18,W-36,H-36);
-  ctx.strokeStyle='#3d7a3d';ctx.lineWidth=1.5;ctx.strokeRect(26,26,W-52,H-52);
+  // Fundo premium
+  const grd=ctx.createLinearGradient(0,0,W,H);
+  grd.addColorStop(0,'#fffdf7');grd.addColorStop(0.55,'#f7f2e8');grd.addColorStop(1,'#eef6ef');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
 
-  // Top/bottom accent bars
-  ctx.fillStyle='#1a2a1a';ctx.fillRect(0,0,W,7);ctx.fillRect(0,H-7,W,7);
+  // Marca d'água técnica discreta
+  ctx.save();
+  ctx.globalAlpha=.055;ctx.fillStyle='#1f6f57';ctx.font='bold 96px Georgia, serif';ctx.textAlign='center';
+  ctx.translate(W/2,H/2+8);ctx.rotate(-0.18);ctx.fillText('CLOUD FORENSICS',0,0);ctx.restore();
 
-  // Corner dots
-  [[38,38],[W-38,38],[38,H-38],[W-38,H-38]].forEach(([x,y])=>{
-    ctx.fillStyle='#3d7a3d';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
-  });
+  // Moldura
+  ctx.strokeStyle='#18342d';ctx.lineWidth=5;ctx.strokeRect(18,18,W-36,H-36);
+  ctx.strokeStyle='#2f8f72';ctx.lineWidth=1.5;ctx.strokeRect(30,30,W-60,H-60);
+  ctx.strokeStyle='rgba(47,143,114,.35)';ctx.lineWidth=1;ctx.strokeRect(42,42,W-84,H-84);
+  ctx.fillStyle='#18342d';ctx.fillRect(0,0,W,8);ctx.fillRect(0,H-8,W,8);
+  ctx.fillStyle='#2f8f72';
+  [[50,50],[W-50,50],[50,H-50],[W-50,H-50]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill()});
 
-  // Header
+  // Cabeçalho
   ctx.textAlign='center';
-  ctx.fillStyle='#3d7a3d';ctx.font='bold 12px serif';
-  ctx.fillText('✦  CLOUD SECURITY FORENSICS LABORATORY  ✦',W/2,68);
-  ctx.strokeStyle='#3d7a3d';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(80,80);ctx.lineTo(W-80,80);ctx.stroke();
+  ctx.fillStyle='#2f8f72';ctx.font='bold 12px Space Mono, monospace';
+  ctx.fillText('✦ CLOUD SECURITY FORENSICS LABORATORY ✦',W/2,68);
+  ctx.strokeStyle='#2f8f72';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(95,82);ctx.lineTo(W-95,82);ctx.stroke();
 
-  // Title
-  ctx.fillStyle='#1a1a1a';ctx.font='italic bold 40px Georgia, serif';
-  ctx.fillText('Certificado de Conclusão',W/2,142);
+  ctx.fillStyle='#101418';ctx.font='italic bold 39px Georgia, serif';
+  ctx.fillText('Certificado de Conclusão',W/2,133);
+  ctx.fillStyle='#5c646b';ctx.font='15px Georgia, serif';
+  ctx.fillText('Certificamos que',W/2,174);
 
-  // "This certifies"
-  ctx.fillStyle='#666';ctx.font='16px Georgia, serif';
-  ctx.fillText('Este documento certifica que',W/2,188);
+  // Nome
+  ctx.fillStyle='#0f1115';ctx.font='bold 33px Georgia, serif';
+  ctx.fillText(holder,W/2,222);
+  const nw=Math.min(ctx.measureText(holder).width,620);
+  ctx.strokeStyle='#2f8f72';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(W/2-nw/2-26,236);ctx.lineTo(W/2+nw/2+26,236);ctx.stroke();
 
-  // Name
-  ctx.fillStyle='#111';ctx.font='bold 34px Georgia, serif';
-  ctx.fillText(ST.userName||'Participante',W/2,240);
-  const nw=ctx.measureText(ST.userName||'Participante').width;
-  ctx.strokeStyle='#3d7a3d';ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(W/2-nw/2-20,253);ctx.lineTo(W/2+nw/2+20,253);ctx.stroke();
+  // Corpo
+  ctx.fillStyle='#343a40';ctx.font='15px Georgia, serif';
+  ctx.fillText('concluiu com aproveitamento o laboratório avançado',W/2,269);
+  ctx.fillStyle='#1f6f57';ctx.font='bold 21px Georgia, serif';
+  ctx.fillText('Operation: S3 Gone Wild — AWS Incident Response',W/2,301);
+  ctx.fillStyle='#5b636b';ctx.font='12px Space Mono, monospace';
+  ctx.fillText('Carga horária estimada: 8 horas · Modalidade: laboratório interativo · Nível: profissional',W/2,326);
 
-  // Body text
-  ctx.fillStyle='#444';ctx.font='15px Georgia, serif';
-  ctx.fillText('concluiu com êxito o desafio avançado de resposta a incidentes em cloud:',W/2,285);
-  ctx.fillStyle='#3d7a3d';ctx.font='bold 20px Georgia, serif';
-  ctx.fillText('Operation: S3 Gone Wild — AWS Incident Response',W/2,320);
-  ctx.fillStyle='#777';ctx.font='12px monospace';
-  ctx.fillText('IAM Abuse  ·  STS AssumeRole  ·  CloudTrail Forensics  ·  S3 Exfiltration  ·  Privilege Escalation',W/2,350);
+  // Competências
+  ctx.fillStyle='rgba(255,255,255,.72)';ctx.fillRect(84,350,732,78);
+  ctx.strokeStyle='rgba(47,143,114,.34)';ctx.lineWidth=1;ctx.strokeRect(84,350,732,78);
+  ctx.fillStyle='#1f6f57';ctx.font='bold 12px Space Mono, monospace';ctx.textAlign='center';
+  ctx.fillText('COMPETÊNCIAS VALIDADAS',W/2,372);
+  line('Investigação forense em CloudTrail, análise de S3 Data Events, abuso de IAM, STS AssumeRole, privilege escalation, contenção de credenciais temporárias e resposta a exfiltração em ambiente AWS.',W/2,397,680,17,'12px Georgia, serif','#33383d');
 
-  // Score box
-  ctx.fillStyle='#f0ede4';ctx.fillRect(W/2-190,372,380,75);
-  ctx.strokeStyle='#ccc';ctx.lineWidth=1;ctx.strokeRect(W/2-190,372,380,75);
-  ctx.fillStyle='#3d7a3d';ctx.font='bold 38px Georgia, serif';
-  ctx.fillText(pct+'%',W/2,418);
-  ctx.fillStyle='#999';ctx.font='11px monospace';
-  ctx.fillText(`${correct} corretas · ${wrong} erradas · ${new Date().toLocaleDateString('pt-BR')}`,W/2,441);
+  // Score, data e hash
+  ctx.fillStyle='#eef4ed';ctx.fillRect(120,448,205,55);
+  ctx.strokeStyle='rgba(47,143,114,.4)';ctx.strokeRect(120,448,205,55);
+  ctx.fillStyle='#1f6f57';ctx.font='bold 24px Georgia, serif';ctx.fillText(pct+'%',222,480);
+  ctx.fillStyle='#667';ctx.font='10px Space Mono, monospace';ctx.fillText(`${correct} corretas · ${wrong} erradas`,222,496);
 
-  // Hash
-  const hash=shash(ST.userName+pct+new Date().toDateString());
-  ctx.fillStyle='#bbb';ctx.font='10px monospace';
-  ctx.fillText('ID: '+hash,W/2,490);
+  ctx.fillStyle='#eef4ed';ctx.fillRect(348,448,205,55);
+  ctx.strokeStyle='rgba(47,143,114,.4)';ctx.strokeRect(348,448,205,55);
+  ctx.fillStyle='#1f6f57';ctx.font='bold 16px Georgia, serif';ctx.fillText(issuedDate,450,476);
+  ctx.fillStyle='#667';ctx.font='10px Space Mono, monospace';ctx.fillText('DATA DE EMISSÃO',450,496);
 
-  // Footer line
-  ctx.strokeStyle='#3d7a3d';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(80,510);ctx.lineTo(W-80,510);ctx.stroke();
-  ctx.fillStyle='#999';ctx.font='11px Georgia, serif';
-  ctx.fillText('Cloud Forensics Lab · AWS Incident Response Training · Nível Profissional',W/2,532);
-  ctx.fillText('Este certificado confirma proficiência em investigação forense de incidentes em cloud AWS.',W/2,550);
+  ctx.fillStyle='#eef4ed';ctx.fillRect(575,448,205,55);
+  ctx.strokeStyle='rgba(47,143,114,.4)';ctx.strokeRect(575,448,205,55);
+  ctx.fillStyle='#1f6f57';ctx.font='bold 14px Space Mono, monospace';ctx.fillText(certId,678,476);
+  ctx.fillStyle='#667';ctx.font='10px Space Mono, monospace';ctx.fillText('HASH / ID DO CERTIFICADO',678,496);
+
+  // Assinatura cursiva
+  ctx.strokeStyle='#2f8f72';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(548,534);ctx.lineTo(790,534);ctx.stroke();
+  ctx.fillStyle='#111';ctx.font="39px 'Great Vibes','Brush Script MT','Segoe Script',cursive";ctx.textAlign='center';
+  ctx.fillText('Mariana BS',669,526);
+  ctx.fillStyle='#4b535a';ctx.font='bold 12px Georgia, serif';
+  ctx.fillText('Mariana BS (Instrutora)',669,554);
+
+  // Rodapé
+  ctx.textAlign='left';ctx.fillStyle='#7b8288';ctx.font='10px Space Mono, monospace';
+  ctx.fillText('Be Safe · Mariana BS — Cybersecurity Engineer',78,552);
+  ctx.fillText('Certificado gerado localmente no navegador. Validação visual por nome, data, score e hash.',78,568);
 }
 
 function shash(s){let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return'CF-'+Math.abs(h).toString(16).toUpperCase().padStart(8,'0')}
