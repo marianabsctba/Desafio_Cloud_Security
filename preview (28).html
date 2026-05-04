@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>☁️ CLOUD FORENSICS LAB — Operation: S3 Gone Wild</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080c10;--bg2:#0d1117;--bg3:#161b22;--bg4:#1c2330;
+  --border:#2a3441;--text:#cdd3da;--muted:#636e7b;
+  --accent:#00d4aa;--accent2:#ff6b35;--accent3:#7c5cbf;
+  --danger:#ff4444;--warn:#ffa500;--success:#00cc88;--info:#4fc3f7;
+  --font-mono:'Space Mono',monospace;--font-ui:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-ui);overflow:hidden;overscroll-behavior:none}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.screen{display:none;height:100vh;overflow:hidden}
+.screen.active{display:flex}
+
+/* INTRO */
+#intro-screen{flex-direction:column;align-items:center;justify-content:flex-start;background:var(--bg);position:relative;overflow-y:auto;overflow-x:hidden;padding:3rem 0;min-height:100vh}
+.intro-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,212,170,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,.04) 1px,transparent 1px);background-size:40px 40px;animation:gridPulse 4s ease-in-out infinite}
+@keyframes gridPulse{0%,100%{opacity:.5}50%{opacity:1}}
+.intro-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,170,.08) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation:glowPulse 3s ease-in-out infinite}
+@keyframes glowPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.2)}}
+.intro-content{position:relative;z-index:10;text-align:center;max-width:860px;padding:2rem;width:100%}
+.intro-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.3);border-radius:999px;padding:.4rem 1rem;font-family:var(--font-mono);font-size:.75rem;color:var(--accent);margin-bottom:1.5rem;animation:fadeDown .6s ease both}
+.intro-title{font-size:clamp(2.2rem,5vw,4rem);font-weight:800;line-height:1.05;margin-bottom:.5rem;animation:fadeDown .6s .1s ease both}
+.intro-title .h1{color:var(--accent)}
+.intro-title .h2{color:var(--accent2)}
+.intro-subtitle{font-family:var(--font-mono);font-size:.9rem;color:var(--muted);margin-bottom:2.5rem;animation:fadeDown .6s .2s ease both}
+.intro-desc{font-size:1rem;line-height:1.7;color:var(--text);margin-bottom:2.5rem;animation:fadeDown .6s .3s ease both}
+.learn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;margin-bottom:2.5rem;animation:fadeDown .6s .4s ease both}
+.learn-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;text-align:left;transition:border-color .2s}
+.learn-card:hover{border-color:var(--accent)}
+.learn-card .icon{font-size:1.5rem;margin-bottom:.5rem}
+.learn-card h4{font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:.25rem}
+.learn-card p{font-size:.78rem;color:var(--muted);line-height:1.5}
+.name-row{display:flex;gap:1rem;justify-content:center;align-items:center;margin-bottom:1.5rem;animation:fadeDown .6s .5s ease both;flex-wrap:wrap}
+.name-input{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;color:var(--text);font-family:var(--font-ui);font-size:1rem;width:280px;outline:none;transition:border-color .2s}
+.name-input:focus{border-color:var(--accent)}
+.name-input::placeholder{color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.5rem;border-radius:8px;border:none;cursor:pointer;font-family:var(--font-ui);font-weight:700;font-size:.9rem;transition:all .2s}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:#00ffcc;transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,212,170,.4)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.intro-warning{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);animation:fadeDown .6s .6s ease both}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+.sarcasm{color:var(--accent2);font-style:italic}
+
+/* MAIN LAB */
+#lab-screen{flex-direction:row}
+.sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-logo{padding:1.25rem 1rem 1rem;border-bottom:1px solid var(--border)}
+.sidebar-logo .logo-text{font-size:1rem;font-weight:800;color:var(--accent);line-height:1}
+.sidebar-logo .logo-sub{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);margin-top:.2rem}
+.sidebar-nav{flex:1;padding:.75rem 0;overflow-y:auto}
+.nav-section{padding:.25rem 1rem .1rem;font-family:var(--font-mono);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:.5rem}
+.nav-item{display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;font-size:.85rem;color:var(--muted);cursor:pointer;transition:all .15s;border-left:2px solid transparent;user-select:none}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:rgba(0,212,170,.08);color:var(--accent);border-left-color:var(--accent)}
+.nav-item .nav-icon{font-size:1rem}
+.nav-item .nav-badge{margin-left:auto;background:var(--accent2);color:#fff;font-size:.6rem;font-family:var(--font-mono);padding:.1rem .35rem;border-radius:999px}
+.sidebar-footer{padding:.75rem 1rem;border-top:1px solid var(--border)}
+.progress-label{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.65rem;color:var(--muted);margin-bottom:.35rem}
+.progress-bar{height:4px;background:var(--border);border-radius:999px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:999px;transition:width .5s ease;width:0%}
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;min-height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.25rem;gap:1rem}
+.topbar-title{font-size:1rem;font-weight:700;color:var(--text);flex:1}
+.topbar-status{display:flex;align-items:center;gap:.4rem;font-family:var(--font-mono);font-size:.7rem;color:var(--muted)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:blink 1.5s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.content-area{flex:1;overflow:hidden;position:relative}
+.panel{display:none;height:100%;flex-direction:column;overflow:hidden}
+.panel.active{display:flex}
+.panel-header{padding:1.25rem 1.5rem .75rem;border-bottom:1px solid var(--border);flex-shrink:0}
+.panel-header h2{font-size:1.2rem;font-weight:700;color:var(--text)}
+.panel-header p{font-size:.82rem;color:var(--muted);margin-top:.2rem;font-family:var(--font-mono)}
+.panel-body{flex:1;overflow-y:auto;padding:1.25rem 1.5rem}
+
+/* TERMINAL */
+.terminal-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#060a0e;border-top:1px solid var(--border)}
+.terminal-toolbar{display:flex;align-items:center;gap:.5rem;padding:.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0}
+.t-dot{width:12px;height:12px;border-radius:50%}
+.t-dot.red{background:#ff5f57}.t-dot.yellow{background:#febc2e}.t-dot.green{background:#28c840}
+.terminal-title-bar{flex:1;text-align:center;font-family:var(--font-mono);font-size:.7rem;color:var(--muted)}
+.terminal-output{flex:1;overflow-y:auto;padding:1rem;font-family:var(--font-mono);font-size:.8rem;line-height:1.6}
+.t-line{margin-bottom:.1rem}
+.t-cmd{color:var(--accent)}.t-comment{color:#636e7b;font-style:italic}.t-error{color:var(--danger)}.t-warn{color:var(--warn)}.t-info{color:var(--info)}
+.t-key{color:#66d9ef}.t-str{color:#a6e22e}.t-num{color:#ae81ff}.t-bool{color:var(--accent2)}.t-null{color:var(--muted)}
+.terminal-input-row{display:flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.terminal-prompt{font-family:var(--font-mono);font-size:.8rem;color:var(--accent);white-space:nowrap}
+.terminal-input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font-mono);font-size:.8rem;caret-color:var(--accent)}
+
+/* LOGS */
+.log-tabs{display:flex;gap:0;padding:0 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+.log-tab{padding:.65rem 1rem;font-family:var(--font-mono);font-size:.75rem;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s}
+.log-tab:hover{color:var(--text)}.log-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.log-content{flex:1;overflow-y:auto;padding:1rem 1.5rem}
+.log-entry{display:flex;gap:1rem;padding:.5rem .75rem;margin-bottom:.35rem;border-radius:6px;background:var(--bg3);border:1px solid var(--border);font-family:var(--font-mono);font-size:.72rem;line-height:1.5;cursor:pointer;transition:border-color .15s}
+.log-entry:hover{border-color:var(--accent)}
+.log-entry.suspicious{border-left:3px solid var(--danger)}.log-entry.warn{border-left:3px solid var(--warn)}.log-entry.normal{border-left:3px solid var(--success)}
+.log-time{color:var(--muted);min-width:155px}.log-type{min-width:140px}
+.log-type.danger{color:var(--danger)}.log-type.warn{color:var(--warn)}.log-type.info{color:var(--info)}
+.log-msg{color:var(--text);flex:1}
+.log-detail-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:2rem}
+.log-detail-modal.open{display:flex}
+.log-detail-box{background:var(--bg3);border:1px solid var(--border);border-radius:12px;width:100%;max-width:680px;max-height:80vh;overflow-y:auto;padding:1.5rem}
+.log-detail-box pre{font-family:var(--font-mono);font-size:.75rem;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-all}
+
+/* QUESTIONS */
+.question-header-info{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.q-stat{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.5rem 1rem;font-family:var(--font-mono);font-size:.75rem}
+.q-stat span{color:var(--accent);font-weight:700}
+.question-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1rem}
+.question-card.answered-correct{border-color:var(--success)}.question-card.answered-wrong{border-color:var(--danger)}
+.question-card.answered-correct .q-num{color:var(--success)}.question-card.answered-wrong .q-num{color:var(--danger)}
+.q-num{font-family:var(--font-mono);font-size:.7rem;color:var(--muted);margin-bottom:.5rem}
+.q-text{font-size:.95rem;font-weight:600;color:var(--text);margin-bottom:1rem;line-height:1.5}
+.q-options{display:flex;flex-direction:column;gap:.5rem}
+.q-option{display:flex;align-items:flex-start;gap:.75rem;padding:.7rem 1rem;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:all .15s;font-size:.85rem;line-height:1.4}
+.q-option:hover:not(.disabled){border-color:var(--accent);background:rgba(0,212,170,.05)}
+.q-option.selected-correct{border-color:var(--success);background:rgba(0,204,136,.1)}
+.q-option.selected-wrong{border-color:var(--danger);background:rgba(255,68,68,.1)}
+.q-option.show-correct{border-color:var(--success);background:rgba(0,204,136,.05)}
+.q-option.disabled{cursor:not-allowed;opacity:.7}
+.q-option-letter{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);min-width:18px;margin-top:.1rem}
+.q-option-text{flex:1}
+.q-explanation{margin-top:1rem;padding:1rem;background:var(--bg4);border-radius:8px;border-left:3px solid var(--accent);font-size:.82rem;line-height:1.6;color:var(--text);display:none}
+.q-explanation.show{display:block}
+.q-explanation strong{color:var(--accent)}
+
+/* RESULT */
+.result-card{background:var(--bg3);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center;margin-bottom:1.5rem}
+.result-score{font-size:4rem;font-weight:800;color:var(--accent);line-height:1;margin-bottom:.5rem}
+.result-score.fail{color:var(--danger)}
+.result-label{font-size:1.1rem;color:var(--muted);margin-bottom:1.5rem}
+.result-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
+.rb-item{background:var(--bg4);border-radius:10px;padding:1rem}
+.rb-val{font-size:1.5rem;font-weight:700}.rb-lbl{font-size:.75rem;color:var(--muted);font-family:var(--font-mono)}
+.certificate-section{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1.5rem}
+.certificate-section h3{font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--text)}
+canvas#cert-canvas{display:block;max-width:100%;border-radius:8px;margin-bottom:1rem;border:1px solid var(--border)}
+
+/* SCENARIO */
+.scenario-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:1.5rem}
+.scenario-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:1.25rem;transition:border-color .2s}
+.scenario-card:hover{border-color:var(--accent2)}
+.sc-icon{font-size:2rem;margin-bottom:.75rem}.sc-title{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:.5rem}
+.sc-desc{font-size:.8rem;color:var(--muted);line-height:1.6;font-family:var(--font-mono)}
+.timeline{position:relative;padding-left:1.5rem}
+.timeline::before{content:'';position:absolute;left:6px;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:1rem;padding:.75rem 1rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:.8rem}
+.tl-item::before{content:'';position:absolute;left:-1.15rem;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+.tl-item.danger::before{background:var(--danger)}.tl-item.warn::before{background:var(--warn)}
+.tl-time{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);margin-bottom:.2rem}
+.tl-text{color:var(--text);font-weight:600}.tl-sub{color:var(--muted);font-size:.75rem;margin-top:.2rem;font-family:var(--font-mono)}
+.alert-box{display:flex;gap:.75rem;padding:.85rem 1rem;border-radius:8px;margin-bottom:.75rem;font-size:.83rem;line-height:1.5}
+.alert-box.info{background:rgba(79,195,247,.07);border:1px solid rgba(79,195,247,.3);color:var(--info)}
+.alert-box.warn{background:rgba(255,165,0,.07);border:1px solid rgba(255,165,0,.3);color:var(--warn)}
+.alert-box.danger{background:rgba(255,68,68,.07);border:1px solid rgba(255,68,68,.3);color:var(--danger)}
+.alert-box.success{background:rgba(0,204,136,.07);border:1px solid rgba(0,204,136,.3);color:var(--success)}
+h3.section-title{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+@media(max-width:768px){.sidebar{display:none}.topbar{gap:.5rem;padding:0 .75rem}.topbar-title{font-size:.85rem}.panel-header{padding:1rem}.panel-body{padding:1rem}.result-breakdown{grid-template-columns:1fr}.question-card{padding:1rem}.log-entry{min-width:720px}.log-content{overflow:auto}.intro-title{font-size:2.15rem}.intro-desc{font-size:.92rem}.learn-grid{grid-template-columns:1fr}.terminal-output{font-size:.72rem}.terminal-prompt{font-size:.72rem}.terminal-input{font-size:.72rem}}
+</style>
+</head>
+<body>
+
+<!-- INTRO SCREEN -->
+<div id="intro-screen" class="screen active">
+  <div class="intro-grid"></div>
+  <div class="intro-glow"></div>
+  <div class="intro-content">
+    <div class="intro-badge" id="intro-badge">☁️ INCIDENT RESPONSE LAB // NÍVEL: PROFISSIONAL</div>
+    <h1 class="intro-title">Operation:<br><span class="h1">S3 Gone Wild</span></h1>
+    <p class="intro-subtitle">// alguém deixou o portão aberto. provavelmente você. talvez não.</p>
+    <p class="intro-desc">
+      Um bucket S3 com dados sensíveis foi exfiltrado. Não há login suspeito nos logs de IAM.
+      Não há malware. Não há hacker de hoodie no Data Center.<br>
+      <span class="sarcasm">É muito mais elegante — e humilhante — do que isso.</span><br><br>
+      Sua missão: investigar via AWS CLI simulada, analisar logs de CloudTrail, GuardDuty e S3,
+      e descobrir a cadeia de ataque antes que o CISO te chame na sala.
+    </p>
+    <div class="learn-grid">
+      <div class="learn-card"><div class="icon">🎭</div><h4>IAM ABUSE</h4><p>Como roles com permissões excessivas viram o maior presente de Natal para atacantes.</p></div>
+      <div class="learn-card"><div class="icon">🎫</div><h4>STS AssumeRole</h4><p>Tokens temporários que duram horas e deixam rastros mínimos. Delicioso.</p></div>
+      <div class="learn-card"><div class="icon">🔍</div><h4>CloudTrail Forensics</h4><p>Ler logs como se fosse romance noir. Cada evento conta uma história.</p></div>
+      <div class="learn-card"><div class="icon">📈</div><h4>Privilege Escalation</h4><p>Subir de Lambda para Admin sem tocar num usuário. Arte moderna.</p></div>
+    </div>
+    <div class="name-row">
+      <input type="text" id="user-name-input" class="name-input" placeholder="Seu nome (vai no certificado)" maxlength="50">
+      <button class="btn btn-primary" onclick="startLab()">🚀 Iniciar Investigação</button>
+    </div>
+    <p class="intro-warning">💾 Progresso salvo localmente neste navegador. Se limpar os dados, perdeu tudo, chefe.<br>☕ Separe um café. Isso não é CTF de 5 minutos.</p>
+  </div>
+</div>
+
+<!-- LOG DETAIL MODAL -->
+<div class="log-detail-modal" id="log-modal">
+  <div class="log-detail-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h3 style="font-size:.95rem;font-weight:700;">Detalhes do Evento</h3>
+      <button class="btn btn-ghost" onclick="closeModal()" style="padding:.4rem .75rem;font-size:.8rem;">✕ Fechar</button>
+    </div>
+    <pre id="modal-content"></pre>
+  </div>
+</div>
+
+<!-- MAIN LAB -->
+<div id="lab-screen" class="screen">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">☁️ ForensicLab</div>
+      <div class="logo-sub">AWS Incident Response</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Investigação</div>
+      <div class="nav-item active" onclick="showPanel('overview')"><span class="nav-icon">🗺️</span> Cenário</div>
+      <div class="nav-item" onclick="showPanel('logs')"><span class="nav-icon">📋</span> Logs SIEM</div>
+      <div class="nav-item" onclick="showPanel('terminal')"><span class="nav-icon">💻</span> AWS CLI</div>
+      <div class="nav-section" style="margin-top:.75rem;">Avaliação</div>
+      <div class="nav-item" onclick="showPanel('questions')"><span class="nav-icon">🧩</span> Perguntas<span class="nav-badge" id="q-badge">15</span></div>
+      <div class="nav-item" onclick="showPanel('result')"><span class="nav-icon">📊</span> Resultado</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="progress-label"><span>Progresso</span><span id="progress-pct">0%</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <div class="topbar">
+      <div class="topbar-title" id="panel-title">🗺️ Cenário do Incidente</div>
+      <div class="topbar-status"><div class="status-dot"></div><span>Investigação ativa</span></div>
+      <div id="user-display" style="font-family:var(--font-mono);font-size:.7rem;color:var(--muted);"></div>
+    </div>
+
+    <div class="content-area">
+
+      <!-- OVERVIEW -->
+      <div id="panel-overview" class="panel active">
+        <div class="panel-header"><h2>🗺️ Cenário: S3 Gone Wild</h2><p>// Classificação: CRÍTICO | Data: 2024-03-15 | Região: us-east-1</p></div>
+        <div class="panel-body">
+          <div class="alert-box danger">🚨 <strong>ALERTA CRÍTICO:</strong> Bucket <code>prod-financials-2024</code> teve 847 objetos acessados às 03:47 UTC. Origem: endereço IP fora do range corporativo. O time de infra jura que "não foi ninguém daqui". Claro.</div>
+          <div class="alert-box warn">⚠️ <strong>OBSERVAÇÃO DO CISO:</strong> "Esse incidente não pode vazar para a imprensa. Também não sei o que é AssumeRole mas soa perigoso." — CEO, às 7h da manhã, no Slack, em maiúsculas.</div>
+          <div class="scenario-grid">
+            <div class="scenario-card"><div class="sc-icon">🏢</div><div class="sc-title">Empresa: FinTechBR S.A.</div><div class="sc-desc">Startup fintech. IPO próximo. Dados de clientes no S3. DevOps "ágil demais" para seguir security reviews. Você foi contratado ontem.</div></div>
+            <div class="scenario-card"><div class="sc-icon">🪣</div><div class="sc-title">Alvo: prod-financials-2024</div><div class="sc-desc">S3 bucket com CPFs, dados de transações e contratos. Não tinha MFA Delete. Tinha versionamento? Claro que não. Por quê fariam isso?</div></div>
+            <div class="scenario-card"><div class="sc-icon">🤖</div><div class="sc-title">Suspeita: Lambda function</div><div class="sc-desc">process-payments-lambda com role IAM excessiva. Alguém colou a role do ambiente de dev em prod. "Só por enquanto", disseram. Há 14 meses.</div></div>
+            <div class="scenario-card"><div class="sc-icon">🎭</div><div class="sc-title">Técnica: AssumeRole Abuse</div><div class="sc-desc">STS usado para assumir role AdminShadow. Credenciais temporárias. Sem login. Sem senha. GuardDuty dormindo no turno da noite.</div></div>
+          </div>
+          <h3 class="section-title">📅 Timeline do Incidente</h3>
+          <div class="timeline">
+            <div class="tl-item"><div class="tl-time">2024-03-14 22:10 UTC</div><div class="tl-text">Atacante descobre variável de ambiente na Lambda</div><div class="tl-sub">AWS_ACCESS_KEY_ID exposta. Alguém fez `console.log(process.env)` em prod. Clássico.</div></div>
+            <div class="tl-item warn"><div class="tl-time">2024-03-14 23:04 UTC</div><div class="tl-text">Primeira chamada STS:AssumeRole documentada</div><div class="tl-sub">IP: 45.155.204.17 (VPN comercial). Assume role AdminShadow. GuardDuty vai notar... daqui a pouco.</div></div>
+            <div class="tl-item danger"><div class="tl-time">2024-03-15 01:33 UTC</div><div class="tl-text">Sessão temporária ativa com privilégios de Admin</div><div class="tl-sub">Token expira em 12h. Suficiente para estragar anos de compliance.</div></div>
+            <div class="tl-item danger"><div class="tl-time">2024-03-15 03:47 UTC</div><div class="tl-text">S3 ListObjects + GetObject em massa</div><div class="tl-sub">847 arquivos baixados. `aws s3 sync`. Tão elegante quanto um martelo.</div></div>
+            <div class="tl-item"><div class="tl-time">2024-03-15 04:02 UTC</div><div class="tl-text">GuardDuty gera Finding (com 2h de atraso)</div><div class="tl-sub">Parabéns GuardDuty. O fogo já apagou. Mas obrigado pelo aviso.</div></div>
+            <div class="tl-item"><div class="tl-time">2024-03-15 07:00 UTC</div><div class="tl-text">CEO descobre pelo Slack. Você é convocado.</div><div class="tl-sub">Mensagem: "EXPLICA ESSE NEGOCIO DE S3 ASSUMEHOLE". Você estava dormindo.</div></div>
+          </div>
+          <h3 class="section-title" style="margin-top:1.5rem;">🎯 Sua Missão</h3>
+          <div class="alert-box info">💡 Use o <strong>AWS CLI</strong> para investigar, os <strong>Logs SIEM</strong> para encontrar evidências e as <strong>Perguntas</strong> para demonstrar seu conhecimento. Mínimo de 80% para certificação. O CISO está te olhando.</div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem;">
+            <button class="btn btn-primary" onclick="showPanel('terminal')">💻 Abrir CLI</button>
+            <button class="btn btn-ghost" onclick="showPanel('logs')">📋 Ver Logs</button>
+            <button class="btn btn-ghost" onclick="showPanel('questions')">🧩 Responder Perguntas</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOGS -->
+      <div id="panel-logs" class="panel">
+        <div class="panel-header"><h2>📋 SIEM — Logs do Incidente</h2><p>// Clique em qualquer evento para ver detalhes completos</p></div>
+        <div class="log-tabs">
+          <div class="log-tab active" onclick="showLogTab('cloudtrail',this)">CloudTrail</div>
+          <div class="log-tab" onclick="showLogTab('s3access',this)">S3 Access Logs</div>
+          <div class="log-tab" onclick="showLogTab('guardduty',this)">GuardDuty</div>
+          <div class="log-tab" onclick="showLogTab('lambda',this)">Lambda Logs</div>
+        </div>
+        <div class="log-content" id="log-content-area"></div>
+      </div>
+
+      <!-- TERMINAL -->
+      <div id="panel-terminal" class="panel">
+        <div class="panel-header" style="flex-shrink:0;"><h2>💻 AWS CLI — Terminal Forense</h2><p>// Digite 'help' para ver comandos disponíveis. Histórico: setas ↑↓</p></div>
+        <div class="terminal-wrap">
+          <div class="terminal-toolbar">
+            <div class="t-dot red"></div><div class="t-dot yellow"></div><div class="t-dot green"></div>
+            <div class="terminal-title-bar">forensic-shell — aws-cli v2.15.0 — us-east-1</div>
+          </div>
+          <div class="terminal-output" id="terminal-output"></div>
+          <div class="terminal-input-row">
+            <span class="terminal-prompt">forensics@incident:~$</span>
+            <input type="text" class="terminal-input" id="terminal-input" placeholder="aws ..." autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+      </div>
+
+      <!-- QUESTIONS -->
+      <div id="panel-questions" class="panel">
+        <div class="panel-header"><h2>🧩 Avaliação — 15 Perguntas</h2><p>// Nível difícil. Alternativas plausíveis. Apenas uma mais correta. Boa sorte.</p></div>
+        <div class="panel-body">
+          <div class="question-header-info">
+            <div class="q-stat">Respondidas: <span id="q-answered">0</span>/15</div>
+            <div class="q-stat">Corretas: <span id="q-correct">0</span></div>
+            <div class="q-stat">Score: <span id="q-score">0%</span></div>
+          </div>
+          <div id="questions-container"></div>
+          <div id="quiz-actions" style="margin-top:1.5rem;display:none;gap:.75rem;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="showPanel('result')">📊 Ver Resultado Final</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULT -->
+      <div id="panel-result" class="panel">
+        <div class="panel-header"><h2>📊 Resultado Final</h2><p>// A hora da verdade. Sem choro.</p></div>
+        <div class="panel-body">
+          <div class="result-card" id="result-card">
+            <div class="result-score" id="final-score">--%</div>
+            <div class="result-label" id="result-label">Responda todas as perguntas primeiro.</div>
+            <div class="result-breakdown">
+              <div class="rb-item"><div class="rb-val" id="rb-correct" style="color:var(--success)">0</div><div class="rb-lbl">CORRETAS</div></div>
+              <div class="rb-item"><div class="rb-val" id="rb-wrong" style="color:var(--danger)">0</div><div class="rb-lbl">ERRADAS</div></div>
+              <div class="rb-item"><div class="rb-val" id="rb-pct" style="color:var(--accent)">0%</div><div class="rb-lbl">APROVEITAMENTO</div></div>
+            </div>
+            <div id="result-verdict" style="font-size:.9rem;color:var(--muted);font-family:var(--font-mono);"></div>
+          </div>
+          <div class="certificate-section" id="cert-section" style="display:none;">
+            <h3>🏆 Certificado de Conclusão</h3>
+            <canvas id="cert-canvas" width="900" height="600"></canvas>
+            <button class="btn btn-primary" onclick="downloadCert()">⬇️ Baixar Certificado PNG</button>
+          </div>
+          <div id="no-cert-msg" style="display:none;" class="alert-box warn">⚠️ Score abaixo de 80%. Nenhum certificado para você hoje. O CISO vai entender.</div>
+          <div style="margin-top:1rem;"><button class="btn btn-ghost" onclick="resetQuiz()">🔄 Refazer Avaliação</button></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// XOR OBFUSCATION ENGINE
+// ═══════════════════════════════════════════════════════
+const SALT='S3GoneWildLab2024XORsalt!@#';
+function xorEnc(str,k){
+  const data=new TextEncoder().encode(str);
+  const key=new TextEncoder().encode(k);
+  const out=new Uint8Array(data.length);
+  for(let i=0;i<data.length;i++)out[i]=data[i]^key[i%key.length];
+  let bin='';out.forEach(b=>bin+=String.fromCharCode(b));
+  return btoa(bin);
+}
+function xorDec(b64,k){
+  const bin=atob(b64);
+  const data=new Uint8Array(bin.length);
+  const key=new TextEncoder().encode(k);
+  for(let i=0;i<bin.length;i++)data[i]=bin.charCodeAt(i)^key[i%key.length];
+  return new TextDecoder().decode(data);
+}
+function enc(v){return xorEnc(JSON.stringify(v),SALT)}
+function dec(e){return JSON.parse(xorDec(e,SALT))}
+
+// ═══════════════════════════════════════════════════════
+// QUESTIONS DATA
+// ═══════════════════════════════════════════════════════
+const QUESTIONS=[
+  {
+    "q": "Qual foi o vetor de acesso inicial que permitiu ao atacante obter credenciais AWS válidas?",
+    "opts": [
+      "Phishing contra desenvolvedor via e-mail corporativo com payload malicioso",
+      "Variável de ambiente AWS_ACCESS_KEY_ID exposta na configuração da função Lambda",
+      "Bucket S3 público contendo arquivo .env com credenciais hardcoded",
+      "Acesso físico ao console AWS por engenharia social no help desk"
+    ]
+  },
+  {
+    "q": "Qual serviço AWS foi o ponto de comprometimento inicial na infraestrutura da empresa?",
+    "opts": [
+      "EC2 instance com SSM Agent mal configurado permitindo execução remota",
+      "RDS com credenciais default expostas na subnet pública",
+      "Lambda function 'process-payments-lambda' com role IAM excessivamente permissiva",
+      "API Gateway sem autenticação expondo endpoints administrativos"
+    ]
+  },
+  {
+    "q": "Que técnica de privilege escalation foi utilizada para obter acesso administrativo?",
+    "opts": [
+      "Criação de novo usuário IAM com AdministratorAccess policy diretamente",
+      "Modificação de bucket policy para permitir acesso cross-account irrestrito",
+      "AssumeRole via STS usando credenciais da Lambda para assumir role AdminShadow",
+      "Exploração de vulnerabilidade no IAM Identity Center via SAML assertion forjada"
+    ]
+  },
+  {
+    "q": "Qual evidência nos logs CloudTrail comprova mais fortemente que houve privilege escalation via STS?",
+    "opts": [
+      "Evento GetCallerIdentity com userType 'Root' fora do horário comercial",
+      "Múltiplos eventos AccessDenied consecutivos seguidos de sucesso repentino",
+      "Evento AssumeRole de IP externo com roleSessionName suspeito e destino AdminShadow",
+      "Evento ConsoleLogin com MFA bypass detectado pelo GuardDuty"
+    ]
+  },
+  {
+    "q": "O GuardDuty gerou finding com 2 horas de atraso após início da exfiltração. Qual o tipo mais provável?",
+    "opts": [
+      "S3/MaliciousIPCaller.Custom — acesso ao S3 de IP em lista negra customizada",
+      "UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS",
+      "Recon:IAMUser/MaliciousIPCaller detectado durante fase de reconhecimento",
+      "Policy:S3/BucketBlockPublicAccessDisabled após mudança de configuração"
+    ]
+  },
+  {
+    "q": "Qual controle preventivo teria bloqueado o ataque na fase de AssumeRole?",
+    "opts": [
+      "Habilitar CloudTrail com S3 data events para logging detalhado de objetos",
+      "Adicionar MFA Delete no bucket S3 para proteção contra exclusão de objetos",
+      "Aplicar aws:SourceIp e aws:PrincipalArn na trust policy da role AdminShadow",
+      "Configurar S3 Versioning para recuperação de objetos após exfiltração"
+    ]
+  },
+  {
+    "q": "O roleSessionName 'lambda-exfil-session' é evidência forense importante. Por quê?",
+    "opts": [
+      "A AWS gera automaticamente sessionNames com prefixo do serviço — lambda-exfil-session seria gerado pela própria Lambda",
+      "sessionNames personalizados ficam no CloudTrail e permitem rastrear a sessão em todos os eventos subsequentes",
+      "O GuardDuty usa o sessionName para correlacionar atividades suspeitas entre diferentes regiões",
+      "sessionNames com palavras-chave suspeitas são bloqueados automaticamente pelo IAM Access Analyzer"
+    ]
+  },
+  {
+    "q": "Qual o tempo máximo de validade de credenciais temporárias geradas pelo STS:AssumeRole?",
+    "opts": [
+      "15 minutos, após o qual um novo AssumeRole é necessário automaticamente",
+      "Máximo de 1 hora, configurável apenas por usuários root",
+      "Entre 15 minutos e 12 horas, dependendo da configuração MaxSessionDuration da role",
+      "Indefinido, válido até ser explicitamente revogado via IAM console"
+    ]
+  },
+  {
+    "q": "No log do S3 Access, qual combinação de operações indica mais claramente exfiltração em massa?",
+    "opts": [
+      "PutObject seguido de DeleteObject em vários arquivos consecutivos",
+      "GetObject com RestoreObject indicando acesso a dados arquivados no Glacier",
+      "ListObjects seguido de GetObject em alto volume vindo de IP único em curto período",
+      "HeadObject repetido seguido de MultipartUpload para bucket diferente"
+    ]
+  },
+  {
+    "q": "A trust policy da AdminShadow tinha Principal: lambda.amazonaws.com sem condition. Qual o problema principal?",
+    "opts": [
+      "Principal de serviço sem SourceArn permite assumir a role fora do fluxo previsto da Lambda",
+      "Principal deveria ser sempre um usuário IAM nominal, não um serviço AWS",
+      "A trust policy deveria usar sts.amazonaws.com como principal direto da chamada",
+      "Lambda não usa trust policy; o problema estaria só na execution role da função"
+    ]
+  },
+  {
+    "q": "O IAM Access Analyzer poderia ter detectado a vulnerabilidade antes do incidente? Qual finding esperado?",
+    "opts": [
+      "Não, o IAM Access Analyzer só analisa acessos cross-account e público — roles internas estão fora do escopo",
+      "Sim, geraria finding de External Access se a trust policy permitisse acesso de fora da zona de confiança",
+      "Sim, analisaria todas as permissões e geraria alertas automáticos para AdministratorAccess policies",
+      "Não, o Access Analyzer requer ativação manual por role e faz análise retroativa semanal"
+    ]
+  },
+  {
+    "q": "Após identificar o comprometimento, qual é a sequência CORRETA de resposta ao incidente?",
+    "opts": [
+      "1. Deletar a Lambda, 2. Revogar policies em massa, 3. Avisar o CISO, 4. Analisar logs",
+      "1. Invalidar sessões STS, 2. Revogar a credencial de origem, 3. Isolar a role, 4. Preservar evidências",
+      "1. Desligar a conta AWS, 2. Criar outra conta, 3. Migrar serviços, 4. Notificar clientes",
+      "1. Trocar senha root, 2. Ativar MFA geral, 3. Rodar Trusted Advisor, 4. Abrir chamado AWS"
+    ]
+  },
+  {
+    "q": "Qual configuração do CloudTrail teria fornecido mais granularidade nos logs de S3 para esta investigação?",
+    "opts": [
+      "Habilitar CloudTrail Insights para detectar anomalias no volume de API calls",
+      "Ativar S3 data events no CloudTrail para registrar GetObject, PutObject e DeleteObject",
+      "Criar um trail separado somente para eventos STS em região diferente",
+      "Habilitar log file validation para garantir integridade dos logs coletados"
+    ]
+  },
+  {
+    "q": "A sessão STS comprometida expirou 1 hora após ser criada. O atacante ainda possui acesso?",
+    "opts": [
+      "Não, após expiração do token STS todo acesso cessa automaticamente e as credenciais se tornam inválidas",
+      "Sim, se o atacante obteve um refresh token durante a sessão para renovação automática",
+      "Depende: se o atacante ainda possui a access key original da Lambda, pode gerar novas sessões STS",
+      "Não, o GuardDuty bloqueia automaticamente re-tentativas de AssumeRole do mesmo IP após finding"
+    ]
+  },
+  {
+    "q": "Para confirmar QUAIS dados específicos foram exfiltrados, qual seria a melhor evidência?",
+    "opts": [
+      "GuardDuty findings detalhando os objetos S3 acessados durante o incidente",
+      "S3 Server Access Logs ou CloudTrail S3 data events com GetObject por filename",
+      "CloudTrail management events mostrando alterações nas políticas do bucket",
+      "VPC Flow Logs mostrando o volume total de dados transferidos para o IP externo"
+    ]
+  }
+];
+
+const OBS_ANS=[
+  "Yg==",
+  "YQ==",
+  "YQ==",
+  "YQ==",
+  "Yg==",
+  "YQ==",
+  "Yg==",
+  "YQ==",
+  "YQ==",
+  "Yw==",
+  "Yg==",
+  "Yg==",
+  "Yg==",
+  "YQ==",
+  "Yg=="
+];
+const OBS_EXP=[
+  "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"
+];
+// ═══════════════════════════════════════════════════════
+// LOG DATA
+// ═══════════════════════════════════════════════════════
+const CT_LOGS=[
+  {time:"2024-03-14T22:10:43Z",type:"GetFunctionConfiguration",src:"45.155.204.17",user:"LambdaExecRole/process-payments-lambda",status:"normal",
+   detail:{eventVersion:"1.08",userAgent:"python-requests/2.28.0",userIdentity:{type:"AssumedRole",principalId:"AROAEXAMPLE:process-payments-lambda",arn:"arn:aws:sts::123456789012:assumed-role/LambdaExecRole/process-payments-lambda",accountId:"123456789012"},eventName:"GetFunctionConfiguration",requestParameters:{functionName:"process-payments-lambda"},responseElements:{environment:{variables:{DB_HOST:"prod-db.us-east-1.rds.amazonaws.com",LOG_LEVEL:"DEBUG",AWS_ACCESS_KEY_ID:"[EXPOSED — ponto de comprometimento]",ENABLE_DEBUG_ENDPOINT:"true",DEBUG_DUMP_ENV:"true"}}},sourceIPAddress:"45.155.204.17",eventTime:"2024-03-14T22:10:43Z",note:"// IP externo obteve a configuração completa da função. Incluindo env vars. Incluindo as credenciais."}},
+  {time:"2024-03-14T22:47:11Z",type:"GetCallerIdentity",src:"45.155.204.17",user:"LambdaExecRole",status:"warn",
+   detail:{eventName:"GetCallerIdentity",userAgent:"aws-cli/2.9.0 Python/3.11.0",userIdentity:{type:"AssumedRole",principalId:"AROAEXAMPLE:process-payments-lambda",arn:"arn:aws:sts::123456789012:assumed-role/LambdaExecRole/process-payments-lambda"},sourceIPAddress:"45.155.204.17",eventTime:"2024-03-14T22:47:11Z",note:"// Atacante confirmando identidade antes de prosseguir. Reconhecimento básico."}},
+  {time:"2024-03-14T23:01:28Z",type:"ListRoles",src:"45.155.204.17",user:"LambdaExecRole",status:"warn",
+   detail:{eventName:"ListRoles",userAgent:"aws-cli/2.9.0",userIdentity:{type:"AssumedRole",arn:"arn:aws:sts::123456789012:assumed-role/LambdaExecRole/process-payments-lambda"},responseElements:{roles:["LambdaExecRole","AdminShadow","ReadOnlyRole","DevDeployRole"]},sourceIPAddress:"45.155.204.17",eventTime:"2024-03-14T23:01:28Z",note:"// Descobriu a role AdminShadow. A description diz 'Nao apagar. IMPORTANTE!!'. Isso é um convite."}},
+  {time:"2024-03-14T23:04:55Z",type:"AssumeRole",src:"45.155.204.17",user:"LambdaExecRole",status:"suspicious",
+   detail:{eventName:"AssumeRole",userAgent:"aws-cli/2.9.0",userIdentity:{type:"AssumedRole",arn:"arn:aws:sts::123456789012:assumed-role/LambdaExecRole/process-payments-lambda"},requestParameters:{roleArn:"arn:aws:iam::123456789012:role/AdminShadow",roleSessionName:"lambda-exfil-session",durationSeconds:43200},responseElements:{credentials:{accessKeyId:"ASIA2EXAMPLETOKEN47X",expiration:"2024-03-15T11:04:55Z"}},sourceIPAddress:"45.155.204.17",eventTime:"2024-03-14T23:04:55Z",note:"// roleSessionName: 'lambda-exfil-session'. Nenhum serviço AWS gera esse nome. Foi digitado manualmente. durationSeconds: 43200 — 12 horas de sessão. Obrigado, MaxSessionDuration generoso."}},
+  {time:"2024-03-15T01:33:02Z",type:"GetBucketPolicy",src:"45.155.204.17",user:"AdminShadow/lambda-exfil-session",status:"suspicious",
+   detail:{eventName:"GetBucketPolicy",userIdentity:{type:"AssumedRole",principalId:"AROAADMINSHADOW:lambda-exfil-session",arn:"arn:aws:sts::123456789012:assumed-role/AdminShadow/lambda-exfil-session"},requestParameters:{bucketName:"prod-financials-2024"},sourceIPAddress:"45.155.204.17",eventTime:"2024-03-15T01:33:02Z",note:"// Atacante usando a sessão AdminShadow agora. 2.5h de pausa para verificar a policy antes de prosseguir."}},
+  {time:"2024-03-15T03:47:19Z",type:"ListObjectsV2",src:"45.155.204.17",user:"AdminShadow/lambda-exfil-session",status:"suspicious",
+   detail:{eventName:"ListObjectsV2",userIdentity:{type:"AssumedRole",arn:"arn:aws:sts::123456789012:assumed-role/AdminShadow/lambda-exfil-session"},requestParameters:{bucketName:"prod-financials-2024",prefix:""},responseElements:{objectCount:847,totalSize:"119.3 MB"},sourceIPAddress:"45.155.204.17",eventTime:"2024-03-15T03:47:19Z",note:"// 847 objetos listados. Isso vai demorar um pouco para baixar. O GuardDuty vai notar... eventualmente."}}
+];
+const S3_LOGS=[
+  {time:"2024-03-15T03:47:22Z",type:"REST.GET.BUCKET (ListObjects)",src:"45.155.204.17",user:"AdminShadow/lambda-exfil-session",status:"suspicious",
+   detail:{operation:"REST.GET.BUCKET",key:"-",http_status:200,bytes_sent:145820,requester:"arn:aws:sts::123456789012:assumed-role/AdminShadow/lambda-exfil-session",bucket:"prod-financials-2024",user_agent:"aws-cli/2.9.0 Python/3.11.0 Linux/5.15.0",request_id:"HXBF29384KQZEXAMPLE",note:"// Listagem completa do bucket. Início da fase de exfiltração."}},
+  {time:"2024-03-15T03:47:58Z",type:"REST.GET.OBJECT — Q4-2023 financials",src:"45.155.204.17",user:"AdminShadow/lambda-exfil-session",status:"suspicious",
+   detail:{operation:"REST.GET.OBJECT",key:"reports/Q4-2023-financials.csv",http_status:200,bytes_sent:2847293,requester:"arn:aws:sts::123456789012:assumed-role/AdminShadow/lambda-exfil-session",bucket:"prod-financials-2024",total_time_ms:1847,note:"// Relatório financeiro do Q4. Exatamente o que você quer ter antes de um IPO concorrente."}},
+  {time:"2024-03-15T03:48:34Z",type:"REST.GET.OBJECT — CPF database",src:"45.155.204.17",user:"AdminShadow/lambda-exfil-session",status:"suspicious",
+   detail:{operation:"REST.GET.OBJECT",key:"clients/cpf-database-jan2024.csv.enc",http_status:200,bytes_sent:18473920,requester:"arn:aws:sts::123456789012:assumed-role/AdminShadow/lambda-exfil-session",bucket:"prod-financials-2024",note:"// 18MB de dados de CPF. Vai precisar de muito advogado e uma boa equipe de DPO."}},
+  {time:"2024-03-15T03:52:11Z",type:"REST.GET.OBJECT — Enterprise contracts",src:"45.155.204.17",user:"AdminShadow/lambda-exfil-session",status:"suspicious",
+   detail:{operation:"REST.GET.OBJECT",key:"contracts/enterprise-agreements-2024.zip",http_status:200,bytes_sent:94712048,requester:"arn:aws:sts::123456789012:assumed-role/AdminShadow/lambda-exfil-session",bucket:"prod-financials-2024",note:"// Contratos de clientes enterprise. 94MB. LGPD manda abraços. CVM também."}},
+  {time:"2024-03-15T04:01:43Z",type:"REST.GET.OBJECT — IPO data",src:"45.155.204.17",user:"AdminShadow/lambda-exfil-session",status:"suspicious",
+   detail:{operation:"REST.GET.OBJECT",key:"reports/Q1-2024-projected-ipo-data.xlsx",http_status:200,bytes_sent:3847201,requester:"arn:aws:sts::123456789012:assumed-role/AdminShadow/lambda-exfil-session",bucket:"prod-financials-2024",note:"// Dados do IPO projetado. Se alguém usar isso para insider trading, vocês têm um problema muito maior."}}
+];
+const GD_LOGS=[
+  {time:"2024-03-15T04:02:17Z",type:"UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS",src:"GuardDuty Engine",user:"AdminShadow/lambda-exfil-session",status:"suspicious",
+   detail:{findingType:"UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS",severity:8.9,severityLabel:"HIGH",region:"us-east-1",accountId:"123456789012",description:"EC2 instance credentials are being used from an external IP address not associated with the EC2 service. Instance credentials were likely exfiltrated from the instance.",resource:{type:"AccessKey",accessKeyDetails:{accessKeyId:"ASIA2EXAMPLETOKEN47X",principalId:"AROAADMINSHADOW:lambda-exfil-session",userType:"AssumedRole"}},service:{action:{awsApiCallAction:{api:"GetObject",serviceName:"s3.amazonaws.com",remoteIpDetails:{ipAddressV4:"45.155.204.17",country:{countryName:"Netherlands"},city:{cityName:"Amsterdam"},organization:{asn:"9002",asnOrg:"RETN Limited"}}}}},note:"// 2 horas de atraso. 119MB de dados já exfiltrados. Este finding chegou como um obituário. Importante para o post-mortem, inútil para a prevenção."}},
+  {time:"2024-03-15T04:05:31Z",type:"Discovery:S3/MaliciousIPCaller",src:"GuardDuty Engine",user:"AdminShadow/lambda-exfil-session",status:"warn",
+   detail:{findingType:"Discovery:S3/MaliciousIPCaller",severity:5.0,severityLabel:"MEDIUM",description:"An S3 API was invoked from an IP address that is included on a threat intelligence list.",resource:{type:"S3Bucket",s3BucketDetails:{name:"prod-financials-2024",type:"Destination",owner:"123456789012"}},note:"// O IP 45.155.204.17 estava em lista de ameaças conhecidas. Mas quem olha GuardDuty às 4h da manhã? Ninguém."}}
+];
+const LM_LOGS=[
+  {time:"2024-03-14T21:58:03Z",type:"NORMAL INVOCATION",src:"process-payments-lambda",user:"EventBridge Schedule",status:"normal",
+   detail:"START RequestId: a1b2c3d4-e5f6-7890-abcd-ef1234567890 Version: $LATEST\nINFO Processing scheduled payment batch — 1247 payments\nINFO DB connection established prod-db.us-east-1.rds.amazonaws.com\nINFO Payment batch processed successfully\nEND RequestId: a1b2c3d4-e5f6-7890-abcd-ef1234567890\nREPORT Duration: 4821.44 ms Billed: 4822 ms Memory: 512MB Used: 312MB\n\n// Invocação legítima. Nada suspeito. Por enquanto."},
+  {time:"2024-03-14T22:08:17Z",type:"ANOMALOUS INVOCATION — /debug/env",src:"process-payments-lambda",user:"HTTP trigger (origem desconhecida)",status:"warn",
+   detail:"START RequestId: deadbeef-cafe-babe-0000-111122223333 Version: $LATEST\nINFO Received request — endpoint: /debug/env\nWARN No payment payload received\nDEBUG Environment variables dump initiated [ENABLE_DEBUG_ENDPOINT=true]\nDEBUG {\n  AWS_LAMBDA_FUNCTION_NAME: 'process-payments-lambda',\n  AWS_ACCESS_KEY_ID: 'AKIAxxxxxxxxxxxxxxxx',\n  AWS_SECRET_ACCESS_KEY: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',\n  AWS_SESSION_TOKEN: '[token ativo da execution role]',\n  DB_HOST: 'prod-db.us-east-1.rds.amazonaws.com'\n}\nINFO Response 200 sent\nEND RequestId: deadbeef-cafe-babe-0000-111122223333\nREPORT Duration: 47.23 ms\n\n// ENABLE_DEBUG_ENDPOINT=true em produção.\n// DEBUG_DUMP_ENV=true em produção.\n// Quem colocou isso aqui vai ter uma longa conversa de RH.\n// As credenciais da Lambda acabaram de ser entregues de bandeja."},
+  {time:"2024-03-14T22:10:05Z",type:"ERROR — Unauthorized endpoint access",src:"process-payments-lambda",user:"IP externo",status:"suspicious",
+   detail:"ERROR Unauthorized endpoint pattern detected: GET /debug/env\nINFO Request from: 45.155.204.17 — sem autenticação\nINFO Response enviado com sucesso: HTTP 200\nWARN Endpoint de debug acessível publicamente\nERROR Credenciais AWS expostas na resposta\n\n// Este erro foi logado.\n// Ninguém estava olhando os logs.\n// O CloudWatch alarm para 'Error' estava configurado com threshold de 100 erros.\n// Esse foi o primeiro. Não triggou nada."}
+];
+
+// ═══════════════════════════════════════════════════════
+// CLI RESPONSES
+// ═══════════════════════════════════════════════════════
+const CLI={
+  'aws sts get-caller-identity':`{
+    "UserId": "AROAEXAMPLE:process-payments-lambda",
+    "Account": "123456789012",
+    "Arn": "arn:aws:sts::123456789012:assumed-role/LambdaExecRole/process-payments-lambda"
+}
+# Você está autenticado como a execution role da Lambda.
+# Observação: esse ARN sendo usado de fora da infra AWS é, por si só, suspeito.
+# Qualquer chamada desta role vinda de IP não-AWS merece investigação.`,
+
+  'aws iam list-roles':`{
+    "Roles": [
+        {
+            "RoleName": "LambdaExecRole",
+            "RoleId": "AROAEXAMPLELAMBDAEXEC",
+            "Arn": "arn:aws:iam::123456789012:role/LambdaExecRole",
+            "CreateDate": "2022-08-14T09:23:11+00:00",
+            "AssumeRolePolicyDocument": {
+                "Statement": [{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]
+            }
+        },
+        {
+            "RoleName": "AdminShadow",
+            "RoleId": "AROAEXAMPLEADMINSHADOW",
+            "Arn": "arn:aws:iam::123456789012:role/AdminShadow",
+            "CreateDate": "2023-01-22T14:45:02+00:00",
+            "Description": "Temporary admin role for DevOps. Nao apagar. IMPORTANTE!!",
+            "MaxSessionDuration": 43200
+        },
+        {
+            "RoleName": "ReadOnlyAccess",
+            "Arn": "arn:aws:iam::123456789012:role/ReadOnlyAccess"
+        },
+        {
+            "RoleName": "DevDeployRole",
+            "Arn": "arn:aws:iam::123456789012:role/DevDeployRole"
+        }
+    ]
+}
+# AdminShadow: "Nao apagar. IMPORTANTE!!" — criada jan/2023. Nunca deletada.
+# MaxSessionDuration: 43200 = 12 horas. Generoso.
+# Execute: aws iam get-role --role-name AdminShadow`,
+
+  'aws iam get-role --role-name adminshadow':`{
+    "Role": {
+        "RoleName": "AdminShadow",
+        "RoleId": "AROAEXAMPLEADMINSHADOW",
+        "Arn": "arn:aws:iam::123456789012:role/AdminShadow",
+        "CreateDate": "2023-01-22T14:45:02+00:00",
+        "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "lambda.amazonaws.com"
+                        # SEM aws:SourceArn. Qualquer Lambda (ou credencial de Lambda)
+                        # pode assumir esta role. De qualquer IP. A qualquer hora.
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        },
+        "Description": "Temporary admin role for DevOps. Nao apagar. IMPORTANTE!!",
+        "MaxSessionDuration": 43200,
+        "Tags": [
+            {"Key": "CreatedBy", "Value": "joao.silva"},
+            {"Key": "Environment", "Value": "temporary"},
+            {"Key": "LastReview", "Value": "never"}
+        ]
+    }
+}
+# Trust policy sem condition aws:SourceArn = qualquer Lambda pode assumir.
+# Tags: LastReview = "never". Pelo menos são honestos.
+# Execute: aws iam list-attached-role-policies --role-name AdminShadow`,
+
+  'aws iam list-attached-role-policies --role-name adminshadow':`{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "AdministratorAccess",
+            "PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess"
+        }
+    ]
+}
+# AdministratorAccess.
+# A política que diz "você pode fazer absolutamente tudo nessa conta AWS".
+# Incluindo assumir outras roles, criar usuários, acessar qualquer bucket,
+# ler segredos, modificar VPCs, desabilitar CloudTrail...
+# É a chave-mestra do kingdom. Numa role com trust policy aberta.
+# Criada como "temporária". Há 14 meses. Ótimo.`,
+
+  'aws cloudtrail lookup-events':`{
+    "Events": [
+        {
+            "EventTime": "2024-03-14T23:04:55Z",
+            "EventName": "AssumeRole",
+            "Username": "LambdaExecRole",
+            "CloudTrailEvent": {
+                "userIdentity": {
+                    "type": "AssumedRole",
+                    "arn": "arn:aws:sts::123456789012:assumed-role/LambdaExecRole/process-payments-lambda"
+                },
+                "sourceIPAddress": "45.155.204.17",
+                "requestParameters": {
+                    "roleArn": "arn:aws:iam::123456789012:role/AdminShadow",
+                    "roleSessionName": "lambda-exfil-session",
+                    "durationSeconds": 43200
+                },
+                "responseElements": {
+                    "credentials": {
+                        "accessKeyId": "ASIA2EXAMPLETOKEN47X",
+                        "expiration": "2024-03-15T11:04:55Z"
+                    }
+                }
+            }
+        },
+        {
+            "EventTime": "2024-03-15T03:47:19Z",
+            "EventName": "ListObjectsV2",
+            "Username": "AdminShadow",
+            "CloudTrailEvent": {
+                "userIdentity": {
+                    "type": "AssumedRole",
+                    "arn": "arn:aws:sts::123456789012:assumed-role/AdminShadow/lambda-exfil-session"
+                },
+                "sourceIPAddress": "45.155.204.17",
+                "requestParameters": {"bucketName": "prod-financials-2024"}
+            }
+        }
+    ]
+}
+# roleSessionName: "lambda-exfil-session" — digitado manualmente. Não é gerado por serviço AWS.
+# Mesmo IP (45.155.204.17) em ambos os eventos — confirma cadeia de ataque.
+# A sessão conecta os dois eventos: Lambda → AdminShadow → S3.`,
+
+  'aws s3api get-bucket-policy --bucket prod-financials-2024':`{
+    "Policy": {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "DenyNonTLS",
+                "Effect": "Deny",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Condition": {"Bool": {"aws:SecureTransport": "false"}}
+            },
+            {
+                "Sid": "AllowAccountRoot",
+                "Effect": "Allow",
+                "Principal": {
+                    "AWS": "arn:aws:iam::123456789012:root"
+                    # Principal root = conta inteira tem acesso.
+                    # Qualquer credencial válida na conta pode acessar.
+                    # Incluindo credenciais temporárias de roles assumidas.
+                    # Como, por exemplo, AdminShadow/lambda-exfil-session.
+                },
+                "Action": "s3:*",
+                "Resource": [
+                    "arn:aws:s3:::prod-financials-2024",
+                    "arn:aws:s3:::prod-financials-2024/*"
+                ]
+            }
+        ]
+    }
+}
+# A policy nega HTTP não-seguro (correto) mas permite principal:root (problemático).
+# O atacante com sessão AdminShadow estava dentro da conta 123456789012.
+# Logo tinha acesso permitido pela policy. O bucket nunca foi "comprometido" — 
+# foi acessado com credenciais legítimas de uma role legítima. Elegante.`,
+
+  'aws lambda list-functions':`{
+    "Functions": [
+        {
+            "FunctionName": "process-payments-lambda",
+            "FunctionArn": "arn:aws:lambda:us-east-1:123456789012:function:process-payments-lambda",
+            "Runtime": "python3.11",
+            "Role": "arn:aws:iam::123456789012:role/LambdaExecRole",
+            "CodeSize": 4847291,
+            "LastModified": "2024-02-28T11:32:15.000+0000",
+            "Environment": {
+                "Variables": {
+                    "DB_HOST": "prod-db.us-east-1.rds.amazonaws.com",
+                    "LOG_LEVEL": "DEBUG",
+                    "ENABLE_DEBUG_ENDPOINT": "true",
+                    "DEBUG_DUMP_ENV": "true"
+                }
+            },
+            "VpcConfig": {
+                "SubnetIds": [],
+                "SecurityGroupIds": []
+            }
+        },
+        {
+            "FunctionName": "send-notifications-lambda",
+            "Runtime": "nodejs18.x",
+            "Role": "arn:aws:iam::123456789012:role/NotificationRole"
+        }
+    ]
+}
+# ENABLE_DEBUG_ENDPOINT: "true" em produção. 
+# DEBUG_DUMP_ENV: "true" em produção.
+# LOG_LEVEL: DEBUG em produção.
+# VpcConfig: vazio — Lambda sem restrição de rede, acessível via internet.
+# Execute: aws lambda get-function-configuration --function-name process-payments-lambda`,
+
+  'aws lambda get-function-configuration --function-name process-payments-lambda':`{
+    "FunctionName": "process-payments-lambda",
+    "FunctionArn": "arn:aws:lambda:us-east-1:123456789012:function:process-payments-lambda",
+    "Runtime": "python3.11",
+    "Role": "arn:aws:iam::123456789012:role/LambdaExecRole",
+    "Handler": "lambda_function.lambda_handler",
+    "Description": "Processes payment transactions for all merchant accounts",
+    "Timeout": 900,
+    "MemorySize": 512,
+    "Environment": {
+        "Variables": {
+            "DB_HOST": "prod-db.us-east-1.rds.amazonaws.com",
+            "DB_NAME": "payments_prod",
+            "LOG_LEVEL": "DEBUG",
+            "ENABLE_DEBUG_ENDPOINT": "true",
+            "DEBUG_DUMP_ENV": "true",
+            "PAYMENT_GATEWAY_SECRET": "[redacted mas estava aqui também]"
+        }
+    },
+    "VpcConfig": {
+        "SubnetIds": [],
+        "SecurityGroupIds": []
+    },
+    "State": "Active",
+    "LastUpdateStatus": "Successful",
+    "LastUpdateStatusReason": "deployado em prod diretamente. sem review. às 23h.",
+    "Architectures": ["x86_64"]
+}
+# Confirmado: DEBUG_DUMP_ENV=true.
+# A Lambda tinha um endpoint /debug/env que retornava todas as env vars.
+# As env vars incluíam as credenciais AWS da execution role.
+# A execution role tinha permissão de AssumeRole sem restrição.
+# A role que podia ser assumida tinha AdministratorAccess.
+# Cadeia de ataque completa. Caso encerrado.
+# Alguém vai ter uma segunda-feira muito difícil.`,
+
+  'help':`Comandos disponíveis (investigação ativa):
+
+  aws sts get-caller-identity
+  aws iam list-roles
+  aws iam get-role --role-name AdminShadow
+  aws iam list-attached-role-policies --role-name AdminShadow
+  aws cloudtrail lookup-events
+  aws s3api get-bucket-policy --bucket prod-financials-2024
+  aws lambda list-functions
+  aws lambda get-function-configuration --function-name process-payments-lambda
+
+  clear                                    Limpar terminal
+
+# Dica: comece com 'aws sts get-caller-identity' e siga a trilha.`
+};
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let ST={userName:'',answers:{},cmdHistory:[],histIdx:-1,qOrder:[]};
+
+function loadST(){
+  try{const s=localStorage.getItem('cfl_st');if(s){const p=JSON.parse(s);ST={...ST,...p};return true}}catch(e){}
+  return false;
+}
+function saveST(){try{localStorage.setItem('cfl_st',JSON.stringify(ST))}catch(e){console.warn('Não foi possível salvar progresso local:',e)}}
+
+// ═══════════════════════════════════════════════════════
+// ENTRY POINTS
+// ═══════════════════════════════════════════════════════
+function startLab(){
+  const inp=document.getElementById('user-name-input');
+  const name=inp.value.trim();
+  if(!name){
+    inp.style.borderColor='var(--danger)';
+    inp.placeholder='⚠️ Obrigatório — quem vai assinar o certificado?';
+    setTimeout(()=>{inp.style.borderColor='';inp.placeholder='Seu nome (vai no certificado)'},2500);
+    return;
+  }
+  ST.userName=name;saveST();
+  document.getElementById('user-display').textContent='👤 '+name;
+  document.getElementById('intro-screen').classList.remove('active');
+  document.getElementById('lab-screen').classList.add('active');
+  initLab();
+}
+
+function initLab(){
+  if(!ST.qOrder.length){ST.qOrder=QUESTIONS.map((_,i)=>i).sort(()=>Math.random()-.5);saveST()}
+  renderQuestions();
+  initTerminal();
+  showLogTab('cloudtrail',document.querySelector('.log-tab'));
+  updateProgress();
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+const PT={'overview':'🗺️ Cenário do Incidente','logs':'📋 Logs SIEM','terminal':'💻 AWS CLI Forense','questions':'🧩 Avaliação — 15 Perguntas','result':'📊 Resultado Final'};
+
+function showPanel(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('panel-title').textContent=PT[name]||name;
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    const oc=n.getAttribute('onclick')||'';
+    if(oc.includes("'"+name+"'"))n.classList.add('active');
+  });
+  if(name==='result')updateResult();
+  if(name==='terminal')setTimeout(()=>document.getElementById('terminal-input').focus(),100);
+}
+
+// ═══════════════════════════════════════════════════════
+// TERMINAL
+// ═══════════════════════════════════════════════════════
+function initTerminal(){
+  const out=document.getElementById('terminal-output');
+  const inp=document.getElementById('terminal-input');
+  out.innerHTML=`<div class="t-line"><span class="t-comment">╔══════════════════════════════════════════════════════════════╗
+║  AWS FORENSIC CLI v2.15.0 — FinTechBR Incident Response      ║
+║  Autenticado: LambdaExecRole/process-payments-lambda         ║
+║  Account: 123456789012  |  Region: us-east-1                 ║
+║  Incidente: S3-EXFIL-2024-001  |  2024-03-15                 ║
+╚══════════════════════════════════════════════════════════════╝</span></div>
+<div class="t-line"><span class="t-warn">⚠  MODO FORENSE: todos os comandos são registrados e auditados.</span></div>
+<div class="t-line"><span class="t-info">→  Digite 'help' para ver os comandos disponíveis.</span></div>
+<div class="t-line"><span class="t-comment"># Dica: comece com aws sts get-caller-identity</span></div><div class="t-line"></div>`;
+
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      const cmd=inp.value.trim();if(!cmd)return;
+      ST.cmdHistory.unshift(cmd);if(ST.cmdHistory.length>50)ST.cmdHistory.pop();
+      ST.histIdx=-1;inp.value='';execCmd(cmd);
+    }else if(e.key==='ArrowUp'){
+      e.preventDefault();
+      if(ST.histIdx<ST.cmdHistory.length-1){ST.histIdx++;inp.value=ST.cmdHistory[ST.histIdx]}
+    }else if(e.key==='ArrowDown'){
+      e.preventDefault();
+      if(ST.histIdx>0){ST.histIdx--;inp.value=ST.cmdHistory[ST.histIdx]}
+      else{ST.histIdx=-1;inp.value=''}
+    }
+  });
+}
+
+function execCmd(cmd){
+  const out=document.getElementById('terminal-output');
+  const cl=document.createElement('div');
+  cl.className='t-line';
+  cl.innerHTML=`<span style="color:var(--muted)">forensics@incident:~$</span> <span class="t-cmd">${esc(cmd)}</span>`;
+  out.appendChild(cl);
+  if(cmd==='clear'){out.innerHTML='';return}
+
+  let result=null;
+  const cml=cmd.toLowerCase().trim().replace(/\s+/g,' ');
+
+  // Try exact then partial match
+  for(const k of Object.keys(CLI)){
+    if(cml===k.toLowerCase()||cml.startsWith(k.toLowerCase())){result=CLI[k];break}
+  }
+  // Try prefix match (e.g. ignoring extra args)
+  if(!result){
+    for(const k of Object.keys(CLI)){
+      const parts=k.toLowerCase().split(' ').slice(0,3).join(' ');
+      if(cml.startsWith(parts)){result=CLI[k];break}
+    }
+  }
+
+  if(!result){
+    result=cml.startsWith('aws ')?
+      `<span class="t-error">An error occurred (UnknownOperation): ${esc(cmd.split(' ').slice(0,3).join(' '))}</span>\n<span class="t-comment"># Comando não reconhecido. Digite 'help' para ver os disponíveis.</span>`:
+      `<span class="t-error">bash: ${esc(cmd.split(' ')[0])}: command not found</span>\n<span class="t-comment"># Shell AWS simulado. Comandos bash normais não funcionam aqui.</span>`;
+  }
+
+  const re=document.createElement('div');
+  re.className='t-line';
+  re.style.cssText='margin-top:.3rem;margin-bottom:.75rem;white-space:pre;';
+  re.innerHTML=colorize(result);
+  out.appendChild(re);
+  out.scrollTop=out.scrollHeight;
+}
+
+function colorize(t){
+  return t
+    .replace(/^(#.*)$/gm,'<span class="t-comment">$1</span>')
+    .replace(/"([^"\n]+)":/g,'<span class="t-key">"$1"</span>:')
+    .replace(/: "([^"\n]+)"/g,': <span class="t-str">"$1"</span>')
+    .replace(/: (true|false)\b/g,': <span class="t-bool">$1</span>')
+    .replace(/: null\b/g,': <span class="t-null">null</span>')
+    .replace(/: (\d+)\b/g,': <span class="t-num">$1</span>');
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ═══════════════════════════════════════════════════════
+// LOGS
+// ═══════════════════════════════════════════════════════
+function showLogTab(tab,el){
+  document.querySelectorAll('.log-tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  const area=document.getElementById('log-content-area');
+  const LMAP={cloudtrail:CT_LOGS,s3access:S3_LOGS,guardduty:GD_LOGS,lambda:LM_LOGS};
+  const logs=LMAP[tab]||[];
+  area.innerHTML=logs.map((log,i)=>{
+    const sc=log.status==='suspicious'?'suspicious':log.status==='warn'?'warn':'normal';
+    const tc=log.status==='suspicious'?'danger':log.status==='warn'?'warn':'info';
+    return `<div class="log-entry ${sc}" onclick='showLD(${JSON.stringify(JSON.stringify({t:tab,i}))})'>
+      <div class="log-time">${log.time}</div>
+      <div class="log-type ${tc}">${log.type}</div>
+      <div class="log-msg">${esc(log.src||'')} → ${esc(log.user||'-')}</div>
+    </div>`;
+  }).join('');
+}
+
+function showLD(ds){
+  const {t,i}=JSON.parse(ds);
+  const LMAP={cloudtrail:CT_LOGS,s3access:S3_LOGS,guardduty:GD_LOGS,lambda:LM_LOGS};
+  const log=(LMAP[t]||[])[i];
+  if(!log)return;
+  const d=typeof log.detail==='string'?log.detail:JSON.stringify(log.detail,null,2);
+  document.getElementById('modal-content').textContent=d;
+  document.getElementById('log-modal').classList.add('open');
+}
+function closeModal(){document.getElementById('log-modal').classList.remove('open')}
+
+// ═══════════════════════════════════════════════════════
+// QUESTIONS
+// ═══════════════════════════════════════════════════════
+function renderQuestions(){
+  const c=document.getElementById('questions-container');c.innerHTML='';
+  const LTRS=['A','B','C','D'];
+  ST.qOrder.forEach((qi,di)=>{
+    const q=QUESTIONS[qi];
+    const ans=ST.answers[qi];
+    const ca=dec(OBS_ANS[qi]);
+    let optOrder;
+    const sk='qo_'+qi;const so=localStorage.getItem(sk);
+    if(so){optOrder=JSON.parse(so)}else{optOrder=[0,1,2,3].sort(()=>Math.random()-.5);localStorage.setItem(sk,JSON.stringify(optOrder))}
+
+    const cardCls=ans!==undefined?(optOrder[ans]===ca?'answered-correct':'answered-wrong'):'';
+
+    const optsH=optOrder.map((oi,ni)=>{
+      let cls='';
+      if(ans!==undefined){
+        if(ni===ans)cls=optOrder[ans]===ca?'selected-correct disabled':'selected-wrong disabled';
+        else if(oi===ca)cls='show-correct disabled';
+        else cls='disabled';
+      }
+      const clickA=ans===undefined?`onclick="ansQ(${qi},${ni},${JSON.stringify(optOrder)})"` :'';
+      return `<div class="q-option ${cls}" ${clickA}><span class="q-option-letter">${LTRS[ni]}</span><span class="q-option-text">${esc(q.opts[oi])}</span></div>`;
+    }).join('');
+
+    let expH='';
+    if(ans!==undefined){
+      const exp=dec(OBS_EXP[qi]);
+      expH=`<div class="q-explanation show"><strong>✓ Por que está correta:</strong><br>${esc(exp.r)}<br><br><strong>Por que as outras estão erradas:</strong>${exp.w.map(ww=>`<div style="margin-top:.4rem;color:var(--muted)">✗ ${esc(ww)}</div>`).join('')}</div>`;
+    }
+    const retH=ans!==undefined&&optOrder[ans]!==ca?`<button class="btn btn-ghost" onclick="retryQ(${qi})" style="font-size:.8rem;padding:.4rem .8rem;margin-top:.75rem;">🔄 Refazer esta pergunta</button>`:'';
+
+    c.innerHTML+=`<div class="question-card ${cardCls}" id="qc${qi}">
+      <div class="q-num">PERGUNTA ${di+1} DE 15</div>
+      <div class="q-text">${esc(q.q)}</div>
+      <div class="q-options">${optsH}</div>
+      ${expH}${retH}
+    </div>`;
+  });
+  updateQStats();checkAllAns();updateProgress();
+}
+
+function ansQ(qi,ni,optOrder){
+  ST.answers[qi]=ni;saveST();renderQuestions();
+  setTimeout(()=>{const el=document.getElementById('qc'+qi);if(el)el.scrollIntoView({behavior:'smooth',block:'center'})},100);
+}
+function retryQ(qi){delete ST.answers[qi];localStorage.removeItem('qo_'+qi);saveST();renderQuestions()}
+
+function updateQStats(){
+  const total=Object.keys(ST.answers).length;
+  let correct=0;
+  Object.keys(ST.answers).forEach(qi=>{
+    const qIdx=parseInt(qi);
+    const oo=JSON.parse(localStorage.getItem('qo_'+qIdx)||'[0,1,2,3]');
+    if(oo[ST.answers[qi]]===dec(OBS_ANS[qIdx]))correct++;
+  });
+  document.getElementById('q-answered').textContent=total;
+  document.getElementById('q-correct').textContent=correct;
+  document.getElementById('q-score').textContent=total>0?Math.round((correct/15)*100)+'%':'0%';
+  document.getElementById('q-badge').textContent=15-total;
+}
+
+function checkAllAns(){
+  const done=Object.keys(ST.answers).length>=15;
+  document.getElementById('quiz-actions').style.display=done?'flex':'none';
+}
+
+function updateProgress(){
+  const p=Math.round((Object.keys(ST.answers).length/15)*100);
+  document.getElementById('progress-pct').textContent=p+'%';
+  document.getElementById('progress-fill').style.width=p+'%';
+}
+
+function resetQuiz(){
+  if(!confirm('Resetar todas as respostas? Progresso será perdido.'))return;
+  ST.answers={};ST.qOrder=QUESTIONS.map((_,i)=>i).sort(()=>Math.random()-.5);
+  for(let i=0;i<15;i++)localStorage.removeItem('qo_'+i);
+  saveST();renderQuestions();updateProgress();showPanel('questions');
+}
+
+// ═══════════════════════════════════════════════════════
+// RESULT
+// ═══════════════════════════════════════════════════════
+function updateResult(){
+  const total=Object.keys(ST.answers).length;
+  let correct=0;
+  Object.keys(ST.answers).forEach(qi=>{
+    const qIdx=parseInt(qi);
+    const oo=JSON.parse(localStorage.getItem('qo_'+qIdx)||'[0,1,2,3]');
+    if(oo[ST.answers[qi]]===dec(OBS_ANS[qIdx]))correct++;
+  });
+  const wrong=total-correct;
+  const pct=total>0?Math.round((correct/15)*100):0;
+
+  document.getElementById('final-score').textContent=pct+'%';
+  document.getElementById('final-score').className='result-score'+(pct<80?' fail':'');
+  document.getElementById('rb-correct').textContent=correct;
+  document.getElementById('rb-wrong').textContent=wrong;
+  document.getElementById('rb-pct').textContent=pct+'%';
+
+  if(total<15){
+    document.getElementById('result-label').textContent=`Você respondeu ${total}/15. Complete todas para resultado final.`;
+    document.getElementById('result-verdict').textContent='';
+    document.getElementById('cert-section').style.display='none';
+    document.getElementById('no-cert-msg').style.display='none';
+    return;
+  }
+
+  const verdicts=[[100,"Nível: Paranóico Profissional. O CISO te ama. Os atacantes te temem. O DevOps te odeia."],[90,"Nível: Senior Investigator. Você provavelmente dorme com o GuardDuty aberto no celular."],[80,"Nível: Certificado. Você entende o suficiente para não ser demitido neste incidente."],[70,"Nível: Quase lá. Revise STS e IAM privilege escalation. O próximo incidente não vai te avisar."],[0,"Nível: Desenvolvedor. Lambda com AdministratorAccess foi você, não foi? Sem julgamentos."]];
+  let verdict=verdicts[verdicts.length-1][1];
+  for(const[t,v]of verdicts){if(pct>=t){verdict=v;break}}
+
+  document.getElementById('result-label').textContent=pct>=80?'✅ APROVADO — Certificado disponível':'❌ REPROVADO — Mínimo: 80%';
+  document.getElementById('result-verdict').textContent=verdict;
+
+  if(pct>=80){
+    document.getElementById('cert-section').style.display='block';
+    document.getElementById('no-cert-msg').style.display='none';
+    genCert(pct,correct,wrong);
+  }else{
+    document.getElementById('cert-section').style.display='none';
+    document.getElementById('no-cert-msg').style.display='block';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// CERTIFICATE
+// ═══════════════════════════════════════════════════════
+function genCert(pct,correct,wrong){
+  const cv=document.getElementById('cert-canvas');
+  const ctx=cv.getContext('2d');
+  const W=900,H=600;
+
+  // Base
+  ctx.fillStyle='#faf8f3';ctx.fillRect(0,0,W,H);
+
+  // Border
+  ctx.strokeStyle='#1a2a1a';ctx.lineWidth=4;ctx.strokeRect(18,18,W-36,H-36);
+  ctx.strokeStyle='#3d7a3d';ctx.lineWidth=1.5;ctx.strokeRect(26,26,W-52,H-52);
+
+  // Top/bottom accent bars
+  ctx.fillStyle='#1a2a1a';ctx.fillRect(0,0,W,7);ctx.fillRect(0,H-7,W,7);
+
+  // Corner dots
+  [[38,38],[W-38,38],[38,H-38],[W-38,H-38]].forEach(([x,y])=>{
+    ctx.fillStyle='#3d7a3d';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
+  });
+
+  // Header
+  ctx.textAlign='center';
+  ctx.fillStyle='#3d7a3d';ctx.font='bold 12px serif';
+  ctx.fillText('✦  CLOUD SECURITY FORENSICS LABORATORY  ✦',W/2,68);
+  ctx.strokeStyle='#3d7a3d';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(80,80);ctx.lineTo(W-80,80);ctx.stroke();
+
+  // Title
+  ctx.fillStyle='#1a1a1a';ctx.font='italic bold 40px Georgia, serif';
+  ctx.fillText('Certificado de Conclusão',W/2,142);
+
+  // "This certifies"
+  ctx.fillStyle='#666';ctx.font='16px Georgia, serif';
+  ctx.fillText('Este documento certifica que',W/2,188);
+
+  // Name
+  ctx.fillStyle='#111';ctx.font='bold 34px Georgia, serif';
+  ctx.fillText(ST.userName||'Participante',W/2,240);
+  const nw=ctx.measureText(ST.userName||'Participante').width;
+  ctx.strokeStyle='#3d7a3d';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(W/2-nw/2-20,253);ctx.lineTo(W/2+nw/2+20,253);ctx.stroke();
+
+  // Body text
+  ctx.fillStyle='#444';ctx.font='15px Georgia, serif';
+  ctx.fillText('concluiu com êxito o desafio avançado de resposta a incidentes em cloud:',W/2,285);
+  ctx.fillStyle='#3d7a3d';ctx.font='bold 20px Georgia, serif';
+  ctx.fillText('Operation: S3 Gone Wild — AWS Incident Response',W/2,320);
+  ctx.fillStyle='#777';ctx.font='12px monospace';
+  ctx.fillText('IAM Abuse  ·  STS AssumeRole  ·  CloudTrail Forensics  ·  S3 Exfiltration  ·  Privilege Escalation',W/2,350);
+
+  // Score box
+  ctx.fillStyle='#f0ede4';ctx.fillRect(W/2-190,372,380,75);
+  ctx.strokeStyle='#ccc';ctx.lineWidth=1;ctx.strokeRect(W/2-190,372,380,75);
+  ctx.fillStyle='#3d7a3d';ctx.font='bold 38px Georgia, serif';
+  ctx.fillText(pct+'%',W/2,418);
+  ctx.fillStyle='#999';ctx.font='11px monospace';
+  ctx.fillText(`${correct} corretas · ${wrong} erradas · ${new Date().toLocaleDateString('pt-BR')}`,W/2,441);
+
+  // Hash
+  const hash=shash(ST.userName+pct+new Date().toDateString());
+  ctx.fillStyle='#bbb';ctx.font='10px monospace';
+  ctx.fillText('ID: '+hash,W/2,490);
+
+  // Footer line
+  ctx.strokeStyle='#3d7a3d';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(80,510);ctx.lineTo(W-80,510);ctx.stroke();
+  ctx.fillStyle='#999';ctx.font='11px Georgia, serif';
+  ctx.fillText('Cloud Forensics Lab · AWS Incident Response Training · Nível Profissional',W/2,532);
+  ctx.fillText('Este certificado confirma proficiência em investigação forense de incidentes em cloud AWS.',W/2,550);
+}
+
+function shash(s){let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return'CF-'+Math.abs(h).toString(16).toUpperCase().padStart(8,'0')}
+
+function downloadCert(){
+  const cv=document.getElementById('cert-canvas');
+  const a=document.createElement('a');
+  a.href=cv.toDataURL('image/png');
+  a.download='certificado-cloud-forensics-'+(ST.userName||'participante').replace(/\s+/g,'-').toLowerCase()+'.png';
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('load',()=>{
+  const saved=loadST();
+  if(saved&&ST.userName){
+    document.getElementById('user-name-input').value=ST.userName;
+    const n=Object.keys(ST.answers).length;
+    if(n>0){
+      const badge=document.getElementById('intro-badge');
+      if(badge)badge.textContent=`💾 Progresso salvo — ${n}/15 respondidas — ${ST.userName}`;
+    }
+  }
+});
+</script>
+</body>
+</html>
