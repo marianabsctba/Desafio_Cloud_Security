@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>☁️ CLOUD FORENSICS LAB — Operation: S3 Gone Wild - Be Safe </title>
+<title>☁️ CLOUD FORENSICS LAB — Operation: S3 Gone Wild</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Great+Vibes&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -379,136 +379,136 @@ const QUESTIONS=[
   {
     "q": "Qual foi o vetor de acesso inicial que permitiu ao atacante obter credenciais AWS válidas?",
     "opts": [
-      "Phishing contra desenvolvedor via e-mail corporativo com payload malicioso",
-      "Variável de ambiente AWS_ACCESS_KEY_ID exposta na configuração da função Lambda",
-      "Bucket S3 público contendo arquivo .env com credenciais hardcoded",
-      "Acesso físico ao console AWS por engenharia social no help desk"
+      "Credencial obtida por phishing direcionado contra um usuário técnico",
+      "Credencial exposta em variáveis de ambiente da função Lambda",
+      "Arquivo .env acessível em bucket S3 com política pública indevida",
+      "Sessão de console obtida por engenharia social no suporte interno"
     ]
   },
   {
     "q": "Qual serviço AWS foi o ponto de comprometimento inicial na infraestrutura da empresa?",
     "opts": [
-      "EC2 instance com SSM Agent mal configurado permitindo execução remota",
-      "RDS com credenciais default expostas na subnet pública",
-      "Lambda function 'process-payments-lambda' com role IAM excessivamente permissiva",
-      "API Gateway sem autenticação expondo endpoints administrativos"
+      "Instância EC2 com SSM Agent exposto a comandos remotos indevidos",
+      "Banco RDS acessível publicamente com credenciais fracas em uso",
+      "Função Lambda process-payments-lambda com role permissiva demais",
+      "API Gateway sem autenticação protegendo endpoints administrativos"
     ]
   },
   {
     "q": "Que técnica de privilege escalation foi utilizada para obter acesso administrativo?",
     "opts": [
-      "Criação de novo usuário IAM com AdministratorAccess policy diretamente",
-      "Modificação de bucket policy para permitir acesso cross-account irrestrito",
-      "AssumeRole via STS usando credenciais da Lambda para assumir role AdminShadow",
-      "Exploração de vulnerabilidade no IAM Identity Center via SAML assertion forjada"
+      "Criação de usuário IAM novo com policy administrativa anexada",
+      "Alteração de bucket policy para liberar acesso cross-account amplo",
+      "Uso de STS AssumeRole para assumir a role AdminShadow privilegiada",
+      "Abuso de federação SAML para emitir assertion administrativa falsa"
     ]
   },
   {
     "q": "Qual evidência nos logs CloudTrail comprova mais fortemente que houve privilege escalation via STS?",
     "opts": [
-      "Evento GetCallerIdentity com userType 'Root' fora do horário comercial",
-      "Múltiplos eventos AccessDenied consecutivos seguidos de sucesso repentino",
-      "Evento AssumeRole de IP externo com roleSessionName suspeito e destino AdminShadow",
-      "Evento ConsoleLogin com MFA bypass detectado pelo GuardDuty"
+      "GetCallerIdentity fora do padrão mostrando principal inesperado",
+      "AccessDenied repetido antes de uma sequência de sucesso operacional",
+      "AssumeRole de IP externo para AdminShadow com sessionName anômalo",
+      "ConsoleLogin sem MFA seguido de ações administrativas sensíveis"
     ]
   },
   {
     "q": "O GuardDuty gerou finding com 2 horas de atraso após início da exfiltração. Qual o tipo mais provável?",
     "opts": [
-      "S3/MaliciousIPCaller.Custom — acesso ao S3 de IP em lista negra customizada",
+      "S3/MaliciousIPCaller.Custom por acesso vindo de lista interna",
       "UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS",
-      "Recon:IAMUser/MaliciousIPCaller detectado durante fase de reconhecimento",
-      "Policy:S3/BucketBlockPublicAccessDisabled após mudança de configuração"
+      "Recon:IAMUser/MaliciousIPCaller durante enumeração inicial",
+      "Policy:S3/BucketBlockPublicAccessDisabled após mudança de bucket"
     ]
   },
   {
     "q": "Qual controle preventivo teria bloqueado o ataque na fase de AssumeRole?",
     "opts": [
-      "Habilitar CloudTrail com S3 data events para logging detalhado de objetos",
-      "Adicionar MFA Delete no bucket S3 para proteção contra exclusão de objetos",
-      "Aplicar aws:SourceIp e aws:PrincipalArn na trust policy da role AdminShadow",
-      "Configurar S3 Versioning para recuperação de objetos após exfiltração"
+      "Ativar CloudTrail S3 data events para registrar leitura de objetos",
+      "Habilitar MFA Delete no bucket para impedir remoção acidental",
+      "Restringir a trust policy da AdminShadow por origem e principal",
+      "Ativar S3 Versioning para recuperar objetos alterados depois"
     ]
   },
   {
     "q": "O roleSessionName 'lambda-exfil-session' é evidência forense importante. Por quê?",
     "opts": [
-      "A AWS gera automaticamente sessionNames com prefixo do serviço — lambda-exfil-session seria gerado pela própria Lambda",
-      "sessionNames personalizados ficam no CloudTrail e permitem rastrear a sessão em todos os eventos subsequentes",
-      "O GuardDuty usa o sessionName para correlacionar atividades suspeitas entre diferentes regiões",
-      "sessionNames com palavras-chave suspeitas são bloqueados automaticamente pelo IAM Access Analyzer"
+      "É criado automaticamente pela Lambda quando executa fora da VPC",
+      "Fica registrado no CloudTrail e rastreia ações da sessão assumida",
+      "É usado pelo GuardDuty como chave primária entre múltiplas regiões",
+      "É bloqueado pelo Access Analyzer quando contém termo suspeito"
     ]
   },
   {
     "q": "Qual o tempo máximo de validade de credenciais temporárias geradas pelo STS:AssumeRole?",
     "opts": [
-      "15 minutos, após o qual um novo AssumeRole é necessário automaticamente",
-      "Máximo de 1 hora, configurável apenas por usuários root",
-      "Entre 15 minutos e 12 horas, dependendo da configuração MaxSessionDuration da role",
-      "Indefinido, válido até ser explicitamente revogado via IAM console"
+      "15 minutos, exigindo renovação automática pelo serviço chamador",
+      "1 hora fixa, alterável somente por usuário root da organização",
+      "Até 12 horas, conforme MaxSessionDuration configurado na role",
+      "Indeterminado, até revogação manual pelo console ou pela CLI"
     ]
   },
   {
     "q": "No log do S3 Access, qual combinação de operações indica mais claramente exfiltração em massa?",
     "opts": [
-      "PutObject seguido de DeleteObject em vários arquivos consecutivos",
-      "GetObject com RestoreObject indicando acesso a dados arquivados no Glacier",
-      "ListObjects seguido de GetObject em alto volume vindo de IP único em curto período",
-      "HeadObject repetido seguido de MultipartUpload para bucket diferente"
+      "PutObject e DeleteObject em sequência sobre muitos objetos sensíveis",
+      "RestoreObject e GetObject sobre dados arquivados em classe Glacier",
+      "ListObjects seguido de muitos GetObject do mesmo IP em pouco tempo",
+      "HeadObject repetido e MultipartUpload para outro bucket externo"
     ]
   },
   {
     "q": "A trust policy da AdminShadow tinha Principal: lambda.amazonaws.com sem condition. Qual o problema principal?",
     "opts": [
-      "Principal de serviço sem SourceArn permite assumir a role fora do fluxo previsto da Lambda",
-      "Principal deveria ser sempre um usuário IAM nominal, não um serviço AWS",
-      "A trust policy deveria usar sts.amazonaws.com como principal direto da chamada",
-      "Lambda não usa trust policy; o problema estaria só na execution role da função"
+      "Principal de serviço sem SourceArn permite assunção fora do fluxo esperado",
+      "Principal deveria ser usuário IAM nominal, nunca um serviço gerenciado",
+      "Trust policy deveria declarar sts.amazonaws.com como principal direto",
+      "Lambda não usa trust policy; só a execution role poderia falhar"
     ]
   },
   {
     "q": "O IAM Access Analyzer poderia ter detectado a vulnerabilidade antes do incidente? Qual finding esperado?",
     "opts": [
-      "Não, o IAM Access Analyzer só analisa acessos cross-account e público — roles internas estão fora do escopo",
-      "Sim, geraria finding de External Access se a trust policy permitisse acesso de fora da zona de confiança",
-      "Sim, analisaria todas as permissões e geraria alertas automáticos para AdministratorAccess policies",
-      "Não, o Access Analyzer requer ativação manual por role e faz análise retroativa semanal"
+      "Não; ele cobre apenas recursos públicos e ignora roles internas",
+      "Sim, se a policy permitisse acesso externo à zona de confiança",
+      "Sim, por detectar automaticamente qualquer AdministratorAccess",
+      "Não; ele roda só por role e em ciclos retroativos semanais"
     ]
   },
   {
     "q": "Após identificar o comprometimento, qual é a sequência CORRETA de resposta ao incidente?",
     "opts": [
-      "1. Deletar a Lambda, 2. Revogar policies em massa, 3. Avisar o CISO, 4. Analisar logs",
-      "1. Invalidar sessões STS, 2. Revogar a credencial de origem, 3. Isolar a role, 4. Preservar evidências",
-      "1. Desligar a conta AWS, 2. Criar outra conta, 3. Migrar serviços, 4. Notificar clientes",
-      "1. Trocar senha root, 2. Ativar MFA geral, 3. Rodar Trusted Advisor, 4. Abrir chamado AWS"
+      "Excluir a Lambda, revogar policies em massa e depois analisar logs",
+      "Invalidar STS, revogar origem, isolar role e preservar evidências",
+      "Desligar a conta, migrar serviços e comunicar clientes depois",
+      "Trocar senha root, ativar MFA e abrir chamado antes da contenção"
     ]
   },
   {
     "q": "Qual configuração do CloudTrail teria fornecido mais granularidade nos logs de S3 para esta investigação?",
     "opts": [
-      "Habilitar CloudTrail Insights para detectar anomalias no volume de API calls",
-      "Ativar S3 data events no CloudTrail para registrar GetObject, PutObject e DeleteObject",
-      "Criar um trail separado somente para eventos STS em região diferente",
-      "Habilitar log file validation para garantir integridade dos logs coletados"
+      "CloudTrail Insights para detectar anomalias no volume de API calls",
+      "S3 data events para registrar GetObject, PutObject e DeleteObject",
+      "Trail separado para eventos STS em uma região operacional distinta",
+      "Log file validation para provar integridade dos arquivos coletados"
     ]
   },
   {
     "q": "A sessão STS comprometida expirou 1 hora após ser criada. O atacante ainda possui acesso?",
     "opts": [
-      "Não, após expiração do token STS todo acesso cessa automaticamente e as credenciais se tornam inválidas",
-      "Sim, se o atacante obteve um refresh token durante a sessão para renovação automática",
-      "Depende: se o atacante ainda possui a access key original da Lambda, pode gerar novas sessões STS",
-      "Não, o GuardDuty bloqueia automaticamente re-tentativas de AssumeRole do mesmo IP após finding"
+      "Não; após expirar o token STS, qualquer acesso é encerrado",
+      "Sim; caso tenha obtido refresh token emitido durante a sessão",
+      "Depende; com a access key original, novas sessões podem ser criadas",
+      "Não; o GuardDuty bloqueia novas tentativas após o finding"
     ]
   },
   {
     "q": "Para confirmar QUAIS dados específicos foram exfiltrados, qual seria a melhor evidência?",
     "opts": [
-      "GuardDuty findings detalhando os objetos S3 acessados durante o incidente",
-      "S3 Server Access Logs ou CloudTrail S3 data events com GetObject por filename",
-      "CloudTrail management events mostrando alterações nas políticas do bucket",
-      "VPC Flow Logs mostrando o volume total de dados transferidos para o IP externo"
+      "Finding do GuardDuty listando cada objeto acessado no bucket",
+      "S3 Server Access Logs ou CloudTrail data events com key dos objetos",
+      "CloudTrail management events de configuração aplicada ao bucket",
+      "VPC Flow Logs indicando volume transferido ao endereço externo"
     ]
   }
 ];
@@ -1208,7 +1208,7 @@ function genCert(pct,correct,wrong){
   ctx.fillStyle='#343a40';ctx.font='15px Georgia, serif';
   ctx.fillText('concluiu com aproveitamento o laboratório avançado',W/2,269);
   ctx.fillStyle='#1f6f57';ctx.font='bold 21px Georgia, serif';
-  ctx.fillText('Operation: S3 Gone Wild — AWS Incident Response',W/2,301);
+  ctx.fillText('S3 Gone Wild - Be Safe',W/2,301);
   ctx.fillStyle='#5b636b';ctx.font='12px Space Mono, monospace';
   ctx.fillText('Carga horária estimada: 8 horas · Modalidade: laboratório interativo · Nível: profissional',W/2,326);
 
@@ -1245,7 +1245,7 @@ function genCert(pct,correct,wrong){
   // Rodapé
   ctx.textAlign='left';ctx.fillStyle='#7b8288';ctx.font='10px Space Mono, monospace';
   ctx.fillText('Be Safe · Mariana BS — Cybersecurity Engineer',78,552);
-  ctx.fillText('',78,568);
+  ctx.fillText('Validação visual por nome, data, score e hash do certificado.',78,568);
 }
 
 function shash(s){let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return'CF-'+Math.abs(h).toString(16).toUpperCase().padStart(8,'0')}
